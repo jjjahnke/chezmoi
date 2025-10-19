@@ -39,4 +39,4 @@
       become_user: jahnke
       environment:
         VAULT_ADDR: "http://192.168.150.210:30200"
-        VAULT_TOKEN: "{{ vault_token }}"
+        VAULT_TOKEN: "{{ vault_token | trim }}"
