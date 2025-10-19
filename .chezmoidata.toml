@@ -8,11 +8,14 @@
         name = "default"
         region = "us-east-2"
         output = "json"
+        vaultSecretPath = "secret/personal/aws/default"
       [data.aws.profiles.rg]
         name = "rg"
         region = "eu-west-2"
         output = "json"
+        vaultSecretPath = "secret/personal/aws/rg"
       [data.aws.profiles.to]
         name = "to"
         region = "us-east-2"
         output = "json"
+        vaultSecretPath = "secret/personal/aws/to"
