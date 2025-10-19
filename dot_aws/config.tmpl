@@ -1,0 +1,24 @@
+# ~/.local/share/chezmoi/dot_aws/config.tmpl
+# This template generates the AWS config file.
+
+# First, generate all the common profiles defined in chezmoi.toml
+{{- range .data.aws.profiles }}
+{{- if eq .name "default" }}
+[default]
+{{- else }}
+[profile {{ .name }}]
+{{- end }}
+region = {{ .region }}
+output = {{ .output }}
+
+{{ end -}}
+
+# Conditionally add work-specific profiles only on machines where
+# machineType is set to "work" in the .chezmoidata.toml file.
+{{- if eq .data.machineType "work" }}
+# --- WORK PROFILES ---
+
+# [profile work-admin]
+# region = us-east-1
+# ...
+{{- end }}

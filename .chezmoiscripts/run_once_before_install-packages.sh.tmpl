@@ -1,0 +1,24 @@
+#!/bin/sh
+#
+# This script is run once to install essential packages.
+# The 'run_once_' prefix ensures it only runs the first time chezmoi applies.
+# The '_before_' prefix ensures it runs before other files are created.
+
+set -e
+
+echo "Running package installation script..."
+
+{{ if eq .chezmoi.os "darwin" -}}
+# macOS package installation
+echo "Detected macOS. Installing packages with Homebrew..."
+# brew install ...
+
+{{ else if eq .chezmoi.os "linux" -}}
+# Linux package installation (Debian/Ubuntu example)
+echo "Detected Linux. Installing packages with apt-get..."
+# sudo apt-get update
+# sudo apt-get install -y ...
+
+{{ end -}}
+
+echo "Package installation script finished."

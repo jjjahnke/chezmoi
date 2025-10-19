@@ -1,0 +1,18 @@
+[data]
+    name = "Jerome Jahnke"
+    email = "j-jahnke@tormenta.com"
+    machineType = "personal" # Possible values: "work", "personal"
+
+    [data.aws.profiles]
+      [data.aws.profiles.default]
+        name = "default"
+        region = "us-east-2"
+        output = "json"
+      [data.aws.profiles.rg]
+        name = "rg"
+        region = "eu-west-2"
+        output = "json"
+      [data.aws.profiles.to]
+        name = "to"
+        region = "us-east-2"
+        output = "json"
