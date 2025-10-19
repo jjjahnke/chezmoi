@@ -8,13 +8,8 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
-# The inventory can be a comma-separated list of hosts.
-# A trailing comma is required if there is only one host.
-INVENTORY="$1,"
-shift
-for ip in "$@"; do
-  INVENTORY="$INVENTORY$ip,"
-done
+# Build the inventory string by joining all arguments with a comma.
+INVENTORY=$(IFS=,; echo "$*")
 
 echo "Running Ansible playbook against: $INVENTORY"
 
