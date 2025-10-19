@@ -95,11 +95,11 @@ echo "Installing essential build dependencies..."
 case "$DISTRO" in
   'ubuntu' | 'debian')
     sudo apt-get update
-    sudo apt-get install -y build-essential curl file git unzip vault zlib1g-dev libbz2-dev liblzma-dev libssl-dev libsqlite3-dev libreadline-dev libffi-dev libncurses5-dev
+    sudo apt-get install -y build-essential curl file git unzip zlib1g-dev libbz2-dev liblzma-dev libssl-dev libsqlite3-dev libreadline-dev libffi-dev libncurses5-dev
     ;;
   'fedora' | 'centos' | 'rhel')
     sudo dnf groupinstall -y "Development Tools"
-    sudo dnf install -y curl file git unzip vault zlib-devel bzip2-devel xz-devel openssl-devel sqlite-devel readline-devel ffi-devel ncurses-devel
+    sudo dnf install -y curl file git unzip zlib-devel bzip2-devel xz-devel openssl-devel sqlite-devel readline-devel ffi-devel ncurses-devel
     ;;
   'macOS')
     # On macOS, Xcode Command Line Tools are the equivalent.
