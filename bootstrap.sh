@@ -71,20 +71,22 @@ fi
 echo "Using shell profile: $PROFILE_FILE"
 
 
-# --- Homebrew Installation ---
+# --- Homebrew Installation (macOS only) ---
 
-if ! command_exists brew; then
-  echo "Homebrew not found. Installing..."
-  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+if [ "$DISTRO" == "macOS" ]; then
+  if ! command_exists brew; then
+    echo "Homebrew not found. Installing..."
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-  # Add brew to the current session's PATH
-  if [ "$ARCH" == "arm64" ]; then # Apple Silicon
-      eval "$(/opt/homebrew/bin/brew shellenv)"
-  else # Intel
-      eval "$(/usr/local/bin/brew shellenv)"
+    # Add brew to the current session's PATH
+    if [ "$ARCH" == "arm64" ]; then # Apple Silicon
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    else # Intel
+        eval "$(/usr/local/bin/brew shellenv)"
+    fi
+  else
+    echo "Homebrew is already installed."
   fi
-else
-  echo "Homebrew is already installed."
 fi
 
 # --- Essential Build Dependencies ---
