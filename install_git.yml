@@ -24,6 +24,6 @@
 
     - name: Run bootstrap script
       ansible.builtin.shell:
-        cmd: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjjahnke/chezmoi/main/bootstrap.sh)"
+        cmd: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjjahnke/chezmoi/main/bootstrap.sh?$(date +%s))"
       become: yes
       become_user: jahnke
