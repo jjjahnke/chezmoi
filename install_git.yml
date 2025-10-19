@@ -29,7 +29,7 @@
         state: present
 
     - name: Check current shell for jahnke
-      ansible.builtin.shell: getent passwd jahnke | cut -d: -f7
+      ansible.builtin.shell: 'getent passwd jahnke | cut -d: -f7'
       register: current_shell
       changed_when: false
 
