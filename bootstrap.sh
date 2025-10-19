@@ -240,4 +240,4 @@ fi
 
 echo "Bootstrap script completed successfully."
 echo "Initializing chezmoi..."
-sudo -u jahnke -i -- chezmoi init --apply jjjahnke
+sudo -u jahnke -i -- chezmoi init --apply jjjahnke/chezmoi
