@@ -20,6 +20,9 @@ echo "Running Ansible playbook against: $INVENTORY"
 # Disable host key checking for ephemeral machines
 export ANSIBLE_HOST_KEY_CHECKING=False
 
+# Remove the temporary directory if it exists
+rm -rf /tmp/chezmoi
+
 # Clone the repository to a temporary directory
 git clone https://github.com/jjjahnke/chezmoi.git /tmp/chezmoi
 
