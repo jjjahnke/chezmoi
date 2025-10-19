@@ -23,6 +23,9 @@ export ANSIBLE_HOST_KEY_CHECKING=False
 # Create the vault password file
 echo "password" > vault_pass.txt
 
+# Remove the temporary directory if it exists
+rm -rf /tmp/chezmoi
+
 # Clone the repository to a temporary directory
 git clone https://github.com/jjjahnke/chezmoi.git /tmp/chezmoi
 
