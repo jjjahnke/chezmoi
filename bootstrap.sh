@@ -121,16 +121,16 @@ echo "Build dependencies installed."
 if ! command_exists vault; then
     echo "Vault not found. Installing..."
     case "$DISTRO" in
-      'ubuntu' | 'debian')
-        wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-        sudo apt-get update
-        sudo apt-get install -y vault
-        ;;
-      'fedora' | 'centos' | 'rhel')
-        sudo dnf install -y dnf-plugins-core
-        sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
-        sudo dnf -y install vault
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
+        VAULT_VERSION="1.17.1"
+        VAULT_ARCH="amd64"
+        if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
+            VAULT_ARCH="arm64"
+        fi
+        curl -fsSL "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_${VAULT_ARCH}.zip" -o "/tmp/vault.zip"
+        unzip -d /tmp /tmp/vault.zip
+        sudo mv /tmp/vault /usr/local/bin/
+        rm /tmp/vault.zip
         ;;
       'macOS')
         brew tap hashicorp/tap
