@@ -8,8 +8,12 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
-# Build the inventory string by joining all arguments with a comma.
-INVENTORY=$(IFS=,; echo "$*")
+# Build the inventory string from all arguments.
+# Ansible requires a trailing comma for a single host.
+INVENTORY=""
+for ip in "$@"; do
+  INVENTORY="$INVENTORY$ip,"
+done
 
 echo "Running Ansible playbook against: $INVENTORY"
 
