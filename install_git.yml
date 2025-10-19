@@ -2,6 +2,8 @@
 - name: Install Git and Bootstrap Environment
   hosts: all
   become: yes
+  vars_files:
+    - vault_vars.yml
   tasks:
     - name: Update apt cache
       ansible.builtin.apt:
@@ -33,3 +35,6 @@
         cmd: /bin/bash /tmp/bootstrap.sh
       become: yes
       become_user: jahnke
+      environment:
+        VAULT_ADDR: "http://192.168.150.210:30200"
+        VAULT_TOKEN: "{{ vault_token }}"

@@ -21,6 +21,6 @@ echo "Running Ansible playbook against: $INVENTORY"
 export ANSIBLE_HOST_KEY_CHECKING=False
 
 # Execute the playbook
-ansible-playbook -i "$INVENTORY" install_git.yml --user jahnke
+ansible-playbook -i "$INVENTORY" install_git.yml --user jahnke --vault-password-file vault_pass.txt
 
 echo "Playbook execution finished."

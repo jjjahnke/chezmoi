@@ -266,4 +266,6 @@ fi
 
 echo "Bootstrap script completed successfully."
 echo "Initializing chezmoi..."
+export VAULT_ADDR
+export VAULT_TOKEN
 sudo -u jahnke -i -- chezmoi init --apply jjjahnke/chezmoi
