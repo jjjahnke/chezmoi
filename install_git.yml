@@ -22,8 +22,14 @@
         post_reboot_delay: 30
         test_command: whoami
 
-    - name: Run bootstrap script
+    - name: Download bootstrap script for inspection
       ansible.builtin.shell:
-        cmd: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjjahnke/chezmoi/main/bootstrap.sh?$(date +%s))"
+        cmd: curl -fsSL "https://raw.githubusercontent.com/jjjahnke/chezmoi/main/bootstrap.sh?$(date +%s)" -o /tmp/bootstrap.sh
+      become: yes
+      become_user: jahnke
+
+    - name: Run the downloaded bootstrap script
+      ansible.builtin.shell:
+        cmd: /bin/bash /tmp/bootstrap.sh
       become: yes
       become_user: jahnke
