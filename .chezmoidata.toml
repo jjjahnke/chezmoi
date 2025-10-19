@@ -2,6 +2,7 @@
     name = "Jerome Jahnke"
     email = "j-jahnke@tormenta.com"
     machineType = "personal" # Possible values: "work", "personal"
+    vault_addr = "http://192.168.150.210:30200"
 
     [data.aws.profiles]
       [data.aws.profiles.default]
