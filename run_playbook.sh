@@ -32,4 +32,3 @@ rm vault_pass.txt
 
 echo "Playbook execution finished."
 
-echo "Playbook execution finished."
