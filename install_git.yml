@@ -37,6 +37,12 @@
         cmd: /bin/bash /tmp/chezmoi/bootstrap.sh
       become: yes
       become_user: jahnke
+
+    - name: Initialize chezmoi from local clone
+      ansible.builtin.shell:
+        cmd: chezmoi init --apply --source /tmp/chezmoi
+      become: yes
+      become_user: jahnke
       environment:
         VAULT_ADDR: "http://192.168.150.210:30200"
         VAULT_TOKEN: "{{ vault_token | trim }}"

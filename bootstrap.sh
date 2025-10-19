@@ -266,7 +266,4 @@ fi
 
 
 echo "Bootstrap script completed successfully."
-echo "Initializing chezmoi..."
-export VAULT_ADDR
-export VAULT_TOKEN
-chezmoi init --apply jjjahnke/chezmoi
+echo "Prerequisite tools installed. Chezmoi initialization will be handled by the playbook."
