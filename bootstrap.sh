@@ -234,6 +234,9 @@ fi
 
 # --- AWS Command Line Interface (v2) Setup ---
 
+add_line_to_file 'export PATH=$PATH:'"$HOME/.local/bin" "$PROFILE_FILE"
+export PATH="$PATH:$HOME/.local/bin" # Add to current session's PATH
+
 if ! command_exists aws; then
   echo "AWS CLI v2 not found. Installing..."
   INSTALL_DIR="$HOME/.local/aws-cli"
@@ -241,16 +244,15 @@ if ! command_exists aws; then
   mkdir -p "$INSTALL_DIR" "$BIN_DIR"
 
   cd /tmp
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    unzip -q awscliv2.zip
-    ./aws/install --update -i "$INSTALL_DIR" -b "$BIN_DIR"
-    rm -f awscliv2.zip
-    rm -rf aws
-    cd -
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip -q awscliv2.zip
+  ./aws/install --update -i "$INSTALL_DIR" -b "$BIN_DIR"
+  rm -f awscliv2.zip
+  rm -rf aws
+  cd -
+else
   echo "AWS CLI v2 is already installed."
 fi
-
-add_line_to_file 'export PATH=$PATH:'"$HOME/.local/bin" "$PROFILE_FILE"
 
 
 # --- chezmoi Installation ---
@@ -267,4 +269,4 @@ echo "Bootstrap script completed successfully."
 echo "Initializing chezmoi..."
 export VAULT_ADDR
 export VAULT_TOKEN
-sudo -u jahnke -i -- chezmoi init --apply jjjahnke/chezmoi
+chezmoi init --apply jjjahnke/chezmoi
