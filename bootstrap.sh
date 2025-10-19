@@ -246,7 +246,7 @@ if ! command_exists aws; then
     ./aws/install --update -i "$INSTALL_DIR" -b "$BIN_DIR"
     rm -f awscliv2.zip
     rm -rf aws
-    cd -else
+    cd -
   echo "AWS CLI v2 is already installed."
 fi
 
