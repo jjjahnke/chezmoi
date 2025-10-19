@@ -95,11 +95,11 @@ echo "Installing essential build dependencies..."
 case "$DISTRO" in
   'ubuntu' | 'debian')
     sudo apt-get update
-    sudo apt-get install -y build-essential curl file git unzip zlib1g-dev libbz2-dev liblzma-dev libssl-dev libsqlite3-dev libreadline-dev libffi-dev libncurses5-dev
+    sudo apt-get install -y build-essential curl file git unzip vault zlib1g-dev libbz2-dev liblzma-dev libssl-dev libsqlite3-dev libreadline-dev libffi-dev libncurses5-dev
     ;;
   'fedora' | 'centos' | 'rhel')
     sudo dnf groupinstall -y "Development Tools"
-    sudo dnf install -y curl file git unzip zlib-devel bzip2-devel xz-devel openssl-devel sqlite-devel readline-devel ffi-devel ncurses-devel
+    sudo dnf install -y curl file git unzip vault zlib-devel bzip2-devel xz-devel openssl-devel sqlite-devel readline-devel ffi-devel ncurses-devel
     ;;
   'macOS')
     # On macOS, Xcode Command Line Tools are the equivalent.
@@ -114,6 +114,32 @@ case "$DISTRO" in
     ;;
 esac
 echo "Build dependencies installed."
+
+
+# --- HashiCorp Vault Installation ---
+
+if ! command_exists vault; then
+    echo "Vault not found. Installing..."
+    case "$DISTRO" in
+      'ubuntu' | 'debian')
+        wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+        sudo apt-get update
+        sudo apt-get install -y vault
+        ;;
+      'fedora' | 'centos' | 'rhel')
+        sudo dnf install -y dnf-plugins-core
+        sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
+        sudo dnf -y install vault
+        ;;
+      'macOS')
+        brew tap hashicorp/tap
+        brew install hashicorp/tap/vault
+        ;;
+    esac
+else
+    echo "Vault is already installed."
+fi
 
 
 # --- Go Environment Provisioning ---
