@@ -5,15 +5,22 @@
   vars_files:
     - vault_vars.yml
   tasks:
+    - name: Check if git is installed
+      ansible.builtin.command: command -v git
+      register: git_check
+      ignore_errors: true
+      changed_when: false
+
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: yes
-      when: ansible_os_family == "Debian"
+      when: ansible_os_family == "Debian" and git_check.failed
 
     - name: Install git
       ansible.builtin.package:
         name: git
         state: present
+      when: git_check.failed
 
     - name: Reboot the machine
       ansible.builtin.reboot:
@@ -23,6 +30,7 @@
         pre_reboot_delay: 0
         post_reboot_delay: 30
         test_command: whoami
+      when: git_check.failed
 
     - name: Clone the repository
       ansible.builtin.git:
@@ -40,7 +48,7 @@
 
     - name: Initialize chezmoi from local clone
       ansible.builtin.shell:
-        cmd: chezmoi init --apply --source /tmp/chezmoi
+        cmd: /home/jahnke/.local/bin/chezmoi init --apply --source /tmp/chezmoi
       become: yes
       become_user: jahnke
       environment:
