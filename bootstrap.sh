@@ -241,13 +241,12 @@ if ! command_exists aws; then
   mkdir -p "$INSTALL_DIR" "$BIN_DIR"
 
   cd /tmp
-  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip -q awscliv2.zip
-./aws/install -i "$INSTALL_DIR" -b "$BIN_DIR"
-rm -f awscliv2.zip
-rm -rf aws
-cd -
-else
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip -q awscliv2.zip
+    ./aws/install --update -i "$INSTALL_DIR" -b "$BIN_DIR"
+    rm -f awscliv2.zip
+    rm -rf aws
+    cd -else
   echo "AWS CLI v2 is already installed."
 fi
 
