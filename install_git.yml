@@ -6,7 +6,7 @@
     - vault_vars.yml
   tasks:
     - name: Check if git is installed
-      ansible.builtin.command: command -v git
+      ansible.builtin.shell: command -v git
       register: git_check
       ignore_errors: true
       changed_when: false
@@ -21,16 +21,34 @@
         name: git
         state: present
       when: git_check.failed
+      register: git_install_result
 
-    - name: Reboot the machine
+    - name: Ensure zsh is installed
+      ansible.builtin.package:
+        name: zsh
+        state: present
+
+    - name: Check current shell for jahnke
+      ansible.builtin.shell: getent passwd jahnke | cut -d: -f7
+      register: current_shell
+      changed_when: false
+
+    - name: Set zsh as default shell for jahnke
+      ansible.builtin.user:
+        name: jahnke
+        shell: /usr/bin/zsh
+      when: current_shell.stdout != '/usr/bin/zsh'
+      register: shell_change_result
+
+    - name: Reboot the machine if needed
       ansible.builtin.reboot:
-        msg: "Rebooting machine after git installation"
+        msg: "Rebooting machine after installing git or changing shell"
         connect_timeout: 5
         reboot_timeout: 600
         pre_reboot_delay: 0
         post_reboot_delay: 30
         test_command: whoami
-      when: git_check.failed
+      when: git_install_result.changed or shell_change_result.changed
 
     - name: Clone the repository
       ansible.builtin.git:
