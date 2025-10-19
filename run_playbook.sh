@@ -9,24 +9,27 @@ if [ "$#" -eq 0 ]; then
 fi
 
 # Build the inventory string from all arguments.
-# Ansible requires a trailing comma for a single host.
 INVENTORY=""
 for ip in "$@"; do
   INVENTORY="$INVENTORY$ip,"
 done
 
+# --- Secure, Non-Interactive Ansible Vault Execution ---
+
+# 1. Create the temporary vault password file.
+echo "password" > vault_pass.txt
+
 echo "Running Ansible playbook against: $INVENTORY"
 
-# Disable host key checking for ephemeral machines
+# 2. Set Host Key Checking to False for ephemeral machines.
 export ANSIBLE_HOST_KEY_CHECKING=False
 
-# Remove the temporary directory if it exists
-rm -rf /tmp/chezmoi
+# 3. Execute the playbook.
+ansible-playbook -i "$INVENTORY" install_git.yml --user jahnke --vault-password-file vault_pass.txt
 
-# Clone the repository to a temporary directory
-git clone https://github.com/jjjahnke/chezmoi.git /tmp/chezmoi
+# 4. Clean up the temporary password file immediately.
+rm vault_pass.txt
 
-# Execute the playbook from the local clone
-ansible-playbook -i "$INVENTORY" /tmp/chezmoi/install_git.yml --user jahnke --vault-password-file /tmp/chezmoi/vault_pass.txt
+echo "Playbook execution finished."
 
 echo "Playbook execution finished."
