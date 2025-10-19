@@ -17,3 +17,20 @@ export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 
+# --- Version Banner ---
+echo "Now using node v$(node --version | sed 's/v//')"
+echo "Now using golang v$(go version | awk '{print $3}' | sed 's/go//')"
+echo "Now using python v$(python -V | awk '{print $2}' | cut -d. -f1,2) (pip v$(pip -V | awk '{print $2}'))"
+
+# --- Custom Prompt ---
+# Function to get the current git branch
+parse_git_branch() {
+  git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
+}
+
+# Setup a red prompt for root and a green one for users.
+if [[ $EUID == 0 ]] ; then
+  PROMPT='%F{red}%m %n [%f %. %F{red}]%f%F{magenta}$(parse_git_branch)%f ->'$'\n'
+else
+  PROMPT='%F{green}%m %n [%f %. %F{green}]%f%F{magenta}$(parse_git_branch)%f ->'$'\n'
+fi
