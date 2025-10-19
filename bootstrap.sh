@@ -239,4 +239,5 @@ fi
 
 
 echo "Bootstrap script completed successfully."
-echo "Please restart your shell or run 'source $PROFILE_FILE' to apply the changes."
+echo "Initializing chezmoi..."
+sudo -u jahnke -i -- chezmoi init --apply jjjahnke
