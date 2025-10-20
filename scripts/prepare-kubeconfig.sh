@@ -83,12 +83,8 @@ VAULT_BASE_PATH="secret/kube/${CONTEXT}/${CLUSTER_NAME}"
 VAULT_COMMANDS_FILE="vault_commands_for_${CLUSTER_NAME}.sh"
 CHEZMOI_TEMPLATE_FILE="private_dot_kube/configs/${CLUSTER_NAME}.yaml.tmpl"
 
-# Sensitive keys and their corresponding names in Vault
-declare -A SENSITIVE_KEYS
-SENSITIVE_KEYS["certificate-authority-data"]="ca_crt"
-SENSITIVE_KEYS["client-certificate-data"]="client_crt"
-SENSITIVE_KEYS["client-key-data"]="client_key"
-SENSITIVE_KEYS["token"]="token"
+# A space-separated list of sensitive keys to search for.
+SENSITIVE_KEYS_LIST="certificate-authority-data client-certificate-data client-key-data token"
 
 # Initialize files
 echo "#!/bin/bash" > "$VAULT_COMMANDS_FILE"
@@ -99,25 +95,39 @@ chmod +x "$VAULT_COMMANDS_FILE"
 MODIFIED_KUBECONFIG="$KUBECONFIG_CONTENT"
 
 # Process clusters
-for key in "${!SENSITIVE_KEYS[@]}"; do
+for key in $SENSITIVE_KEYS_LIST; do
+  vault_key=""
+  case "$key" in
+    "certificate-authority-data") vault_key="ca_crt" ;;
+    "client-certificate-data")    vault_key="client_crt" ;;
+    "client-key-data")            vault_key="client_key" ;;
+    "token")                      vault_key="token" ;;
+  esac
+
   yq_path=".clusters[].cluster.\"${key}\""
   if [[ $(echo "$MODIFIED_KUBECONFIG" | yq e "$yq_path") != "null" ]]; then
     secret_value=$(echo "$MODIFIED_KUBECONFIG" | yq e "$yq_path")
-    vault_key=${SENSITIVE_KEYS[$key]}
     echo "vault kv put ${VAULT_BASE_PATH} ${vault_key}=\"${secret_value}\"" >> "$VAULT_COMMANDS_FILE"
-    MODIFIED_KUBECONFIG=$(echo "$MODIFIED_KUBECONFIG" | yq e "(${yq_path}) |= \"{{ (vault \"${VAULT_BASE_PATH}\").data.data.${vault_key} }}\""")
+    MODIFIED_KUBECONFIG=$(echo "$MODIFIED_KUBECONFIG" | yq e "(${yq_path}) |= \"{{ (vault \\\"${VAULT_BASE_PATH}\\\").data.data.${vault_key} }}\"")
     echo "Found and replaced '${key}' in clusters..." >&2
   fi
 done
 
 # Process users
-for key in "${!SENSITIVE_KEYS[@]}"; do
+for key in $SENSITIVE_KEYS_LIST; do
+  vault_key=""
+  case "$key" in
+    "certificate-authority-data") vault_key="ca_crt" ;;
+    "client-certificate-data")    vault_key="client_crt" ;;
+    "client-key-data")            vault_key="client_key" ;;
+    "token")                      vault_key="token" ;;
+  esac
+
   yq_path=".users[].user.\"${key}\""
   if [[ $(echo "$MODIFIED_KUBECONFIG" | yq e "$yq_path") != "null" ]]; then
     secret_value=$(echo "$MODIFIED_KUBECONFIG" | yq e "$yq_path")
-    vault_key=${SENSITIVE_KEYS[$key]}
     echo "vault kv put ${VAULT_BASE_PATH} ${vault_key}=\"${secret_value}\"" >> "$VAULT_COMMANDS_FILE"
-    MODIFIED_KUBECONFIG=$(echo "$MODIFIED_KUBECONFIG" | yq e "(${yq_path}) |= \"{{ (vault \"${VAULT_BASE_PATH}\").data.data.${vault_key} }}\""")
+    MODIFIED_KUBECONFIG=$(echo "$MODIFIED_KUBECONFIG" | yq e "(${yq_path}) |= \"{{ (vault \\\"${VAULT_BASE_PATH}\\\").data.data.${vault_key} }}\"")
     echo "Found and replaced '${key}' in users..." >&2
   fi
 done
