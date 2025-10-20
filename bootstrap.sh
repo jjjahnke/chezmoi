@@ -166,8 +166,8 @@ else
 fi
 
 # Install kubectx and kubens
-if ! command_exists kubectx; then
-    echo "kubectx not found. Installing..."
+if ! command_exists kubectx || ! command_exists kubens; then
+    echo "kubectx or kubens not found. Installing..."
     case "$DISTRO" in
       'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
         KUBECTX_VERSION="v0.9.5"
@@ -193,7 +193,7 @@ if ! command_exists kubectx; then
         ;;
     esac
 else
-    echo "kubectx is already installed."
+    echo "kubectx and kubens are already installed."
 fi
 
 
