@@ -97,6 +97,46 @@ All changes to the environment follow a structured, version-controlled Git workf
     chezmoi update
     ```
 
+## Managing Kubernetes Configurations
+
+This setup uses a multi-file approach for Kubernetes configurations, where each cluster has its own config file. The `KUBECONFIG` environment variable is automatically managed to include all files from the `~/.kube/configs` directory.
+
+To add a new cluster configuration, follow these steps:
+
+1.  **Place the Config File:** Take your new `kubeconfig` file and place it inside the `private_dot_kube/configs/` directory in this repository. For example, name it `my-new-cluster.yaml`.
+
+2.  **Convert to a Template:** Rename the file to end with `.tmpl`.
+    ```bash
+    mv private_dot_kube/configs/my-new-cluster.yaml private_dot_kube/configs/my-new-cluster.yaml.tmpl
+    ```
+
+3.  **Secure the Secrets:** Edit the new `.tmpl` file and replace any sensitive information (like `token`, `client-key-data`, or `client-certificate-data`) with `chezmoi`'s `vault` template function.
+
+    **Example:**
+
+    Before (original `kubeconfig`):
+    ```yaml
+    # ...
+    users:
+    - name: my-user
+      user:
+        token: "THIS_IS_A_VERY_SECRET_TOKEN"
+    # ...
+    ```
+
+    After (in your `.tmpl` file):
+    ```go-template
+    # ...
+    users:
+    - name: my-user
+      user:
+        token: "{{ (vault "secret/kube/my-new-cluster").data.data.token }}"
+    # ...
+    ```
+    *Note: You must first store the secret (`token` in this case) in your HashiCorp Vault at the specified path (`secret/kube/my-new-cluster`).*
+
+After adding the file and running `chezmoi apply`, the new cluster context will be automatically available to `kubectl`, `kubectx`, and other Kubernetes tools.
+
 ## Containerized and Cloud-Native Environments
 
 This architecture extends seamlessly to ephemeral environments.

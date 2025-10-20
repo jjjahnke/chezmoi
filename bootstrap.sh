@@ -142,6 +142,61 @@ else
 fi
 
 
+# --- Kubernetes Tools ---
+
+# Install kubectl
+if ! command_exists kubectl; then
+    echo "kubectl not found. Installing..."
+    case "$DISTRO" in
+      'Linux')
+        KUBE_ARCH="amd64"
+        if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
+            KUBE_ARCH="arm64"
+        fi
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${KUBE_ARCH}/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        rm kubectl
+        ;;
+      'macOS')
+        brew install kubectl
+        ;;
+    esac
+else
+    echo "kubectl is already installed."
+fi
+
+# Install kubectx and kubens
+if ! command_exists kubectx; then
+    echo "kubectx not found. Installing..."
+    case "$DISTRO" in
+      'Linux')
+        KUBECTX_VERSION="v0.9.5"
+        KUBE_ARCH="x86_64"
+        if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
+            KUBE_ARCH="arm64"
+        fi
+        
+        # Download and extract
+        curl -fsSL "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubectx_${KUBECTX_VERSION}_linux_${KUBE_ARCH}.tar.gz" -o "/tmp/kubectx.tar.gz"
+        tar -xzf /tmp/kubectx.tar.gz -C /tmp
+        
+        # Install binaries
+        sudo install -o root -g root -m 0755 /tmp/kubectx /usr/local/bin/kubectx
+        sudo install -o root -g root -m 0755 /tmp/kubens /usr/local/bin/kubens
+        
+        # Cleanup
+        rm /tmp/kubectx.tar.gz /tmp/kubectx /tmp/kubens
+        ;;
+      'macOS')
+        brew install kubectx
+        ;;
+    esac
+else
+    echo "kubectx is already installed."
+fi
+
+
+
 # --- Go Environment Provisioning ---
 
 GO_VERSION="1.22.2"

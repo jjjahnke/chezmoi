@@ -53,3 +53,13 @@ if [[ $EUID == 0 ]] ; then
 else
   PROMPT='%F{green}%m %n [%f %. %F{green}]%f%F{magenta}$(parse_git_branch)%f ->'$'\n'
 fi
+
+# --- Kubernetes Configuration ---
+# Dynamically set KUBECONFIG to merge all configs in ~/.kube/configs
+KUBECONFIG_DIR="$HOME/.kube/configs"
+if [ -d "$KUBECONFIG_DIR" ]; then
+  KUBECONFIG_FILES=$(find "$KUBECONFIG_DIR" -type f \( -name "*.yaml" -o -name "*.yml" \) | tr '\n' ':')
+  if [ -n "$KUBECONFIG_FILES" ]; then
+    export KUBECONFIG="${KUBECONFIG_FILES%:}" # Remove trailing colon
+  fi
+fi
