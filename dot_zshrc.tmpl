@@ -20,7 +20,7 @@ eval "$(pyenv init -)"
 # --- Vault Configuration ---
 export VAULT_ADDR={{ .data.vault_addr | quote }}
 
-{{ if ne .machineType "work" -}}
+{{ if or (not (hasKey . "machineType")) (ne .machineType "work") -}}
 # --- Personal Environment Variables ---
 export GEMINI_API_KEY="{{ (vault "secret/personal/api-keys").data.data.gemini_api_key }}"
 {{- end }}
