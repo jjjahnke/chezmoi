@@ -13,7 +13,7 @@ The core objective of this architecture is to eliminate manual configuration and
 *   **Fully Automated Setup:** Go from a bare OS (macOS or Linux) to a fully provisioned development environment with two commands.
 *   **Declarative State Management:** `chezmoi` is used to manage the desired state of configuration files, ensuring consistency and predictability.
 *   **Powerful Templating:** Configurations are generated dynamically based on machine-specific attributes (e.g., OS, hostname, work vs. personal), allowing a single source of truth to manage multiple contexts.
-*   **Secure Secret Management:** All sensitive data (API keys, credentials) is managed out-of-band in **HashiCorp Vault**. Secrets are fetched in-memory during configuration application and are never stored in the Git repository.
+*   **Secure Secret Management:** All sensitive data (API keys, credentials) is managed out-of-band in **HashiCorp Vault**. Secrets are fetched in-memory during configuration application and are never stored in the Git repository. This includes support for context-aware secrets, allowing for different credentials to be applied based on a machine's role (e.g., "work" or "personal").
 *   **Cross-Platform & Ephemeral:** Designed for consistency across macOS, Linux, bare-metal servers (PXE boot), Docker containers, and Kubernetes pods.
 *   **Auditable and Version-Controlled:** Every change to the environment's configuration is tracked in Git history, providing a full audit trail and the ability to review or revert changes.
 
