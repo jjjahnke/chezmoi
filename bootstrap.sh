@@ -255,6 +255,18 @@ else
 fi
 
 
+# --- Gemini CLI Installation ---
+
+if ! command_exists gemini; then
+    echo "Gemini CLI not found. Installing..."
+    # Ensure nvm is sourced
+    . "$NVM_DIR/nvm.sh"
+    npm install -g @google/gemini-cli
+else
+    echo "Gemini CLI is already installed."
+fi
+
+
 # --- chezmoi Installation ---
 
 if ! command_exists chezmoi; then
