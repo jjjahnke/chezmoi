@@ -148,7 +148,7 @@ fi
 if ! command_exists kubectl; then
     echo "kubectl not found. Installing..."
     case "$DISTRO" in
-      'Linux')
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
         KUBE_ARCH="amd64"
         if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
             KUBE_ARCH="arm64"
@@ -169,7 +169,7 @@ fi
 if ! command_exists kubectx; then
     echo "kubectx not found. Installing..."
     case "$DISTRO" in
-      'Linux')
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
         KUBECTX_VERSION="v0.9.5"
         KUBE_ARCH="x86_64"
         if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then

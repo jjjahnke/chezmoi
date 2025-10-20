@@ -88,11 +88,12 @@ SENSITIVE_KEYS_LIST="certificate-authority-data client-certificate-data client-k
 
 # Initialize files
 echo "#!/bin/bash" > "$VAULT_COMMANDS_FILE"
-echo "# This script contains the commands to upload secrets for the '${CLUSTER_NAME}' cluster." >> "$VAULT_COMMANDS_FILE"
+echo "# This script contains the command to upload secrets for the '${CLUSTER_NAME}' cluster." >> "$VAULT_COMMANDS_FILE"
 echo "# Review carefully before executing." >> "$VAULT_COMMANDS_FILE"
 chmod +x "$VAULT_COMMANDS_FILE"
 
 MODIFIED_KUBECONFIG="$KUBECONFIG_CONTENT"
+VAULT_KV_PAIRS=""
 
 # Process clusters
 for key in $SENSITIVE_KEYS_LIST; do
@@ -107,7 +108,7 @@ for key in $SENSITIVE_KEYS_LIST; do
   yq_path=".clusters[].cluster.\"${key}\""
   if [[ $(echo "$MODIFIED_KUBECONFIG" | yq e "$yq_path") != "null" ]]; then
     secret_value=$(echo "$MODIFIED_KUBECONFIG" | yq e "$yq_path")
-    echo "vault kv put ${VAULT_BASE_PATH} ${vault_key}=\"${secret_value}\"" >> "$VAULT_COMMANDS_FILE"
+    VAULT_KV_PAIRS="${VAULT_KV_PAIRS} ${vault_key}=\"${secret_value}\""
     MODIFIED_KUBECONFIG=$(echo "$MODIFIED_KUBECONFIG" | yq e "(${yq_path}) |= \"{{ (vault \\\"${VAULT_BASE_PATH}\\\").data.data.${vault_key} }}\"")
     echo "Found and replaced '${key}' in clusters..." >&2
   fi
@@ -126,11 +127,16 @@ for key in $SENSITIVE_KEYS_LIST; do
   yq_path=".users[].user.\"${key}\""
   if [[ $(echo "$MODIFIED_KUBECONFIG" | yq e "$yq_path") != "null" ]]; then
     secret_value=$(echo "$MODIFIED_KUBECONFIG" | yq e "$yq_path")
-    echo "vault kv put ${VAULT_BASE_PATH} ${vault_key}=\"${secret_value}\"" >> "$VAULT_COMMANDS_FILE"
+    VAULT_KV_PAIRS="${VAULT_KV_PAIRS} ${vault_key}=\"${secret_value}\""
     MODIFIED_KUBECONFIG=$(echo "$MODIFIED_KUBECONFIG" | yq e "(${yq_path}) |= \"{{ (vault \\\"${VAULT_BASE_PATH}\\\").data.data.${vault_key} }}\"")
     echo "Found and replaced '${key}' in users..." >&2
   fi
 done
+
+# Write the single, consolidated Vault command
+if [[ -n "$VAULT_KV_PAIRS" ]]; then
+  echo "vault kv put ${VAULT_BASE_PATH}${VAULT_KV_PAIRS}" >> "$VAULT_COMMANDS_FILE"
+fi
 
 # --- Write Output Files ---
 mkdir -p "$(dirname "$CHEZMOI_TEMPLATE_FILE")"
