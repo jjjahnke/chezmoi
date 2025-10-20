@@ -384,7 +384,17 @@ fi
 
 if ! command_exists chezmoi; then
     echo "chezmoi not found. Installing..."
-    sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+    case "$DISTRO" in
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
+        sudo snap install chezmoi --classic
+        ;;
+      'macOS')
+        brew install chezmoi
+        ;;
+      *) # Fallback for other distros
+        sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+        ;;
+    esac
 else
     echo "chezmoi is already installed."
 fi
