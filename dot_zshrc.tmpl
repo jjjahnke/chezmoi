@@ -34,6 +34,11 @@ setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 
+# --- Zsh Completion ---
+# Initializes the Zsh completion system.
+autoload -U compinit
+compinit
+
 # --- Version Banner ---
 echo "Now using node v$(node --version | sed 's/v//')"
 echo "Now using golang v$(go version | awk '{print $3}' | sed 's/go//')"

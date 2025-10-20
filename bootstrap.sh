@@ -156,6 +156,11 @@ if ! command_exists kubectl; then
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${KUBE_ARCH}/kubectl"
         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
         rm kubectl
+        
+        # Install kubectl completion
+        ZSH_COMPLETION_DIR="/usr/local/share/zsh/site-functions"
+        sudo mkdir -p "$ZSH_COMPLETION_DIR"
+        kubectl completion zsh | sudo tee "$ZSH_COMPLETION_DIR/_kubectl" > /dev/null
         ;;
       'macOS')
         brew install kubectl
@@ -185,8 +190,16 @@ if ! command_exists kubectx || ! command_exists kubens; then
         curl -fsSL "https://raw.githubusercontent.com/ahmetb/kubectx/${KUBECTX_VERSION}/kubens" -o "/tmp/kubens"
         sudo install -o root -g root -m 0755 /tmp/kubens /usr/local/bin/kubens
         
+        # Install Zsh completion scripts
+        ZSH_COMPLETION_DIR="/usr/local/share/zsh/site-functions"
+        sudo mkdir -p "$ZSH_COMPLETION_DIR"
+        curl -fsSL "https://raw.githubusercontent.com/ahmetb/kubectx/${KUBECTX_VERSION}/completion/_kubectx.zsh" -o "/tmp/_kubectx.zsh"
+        curl -fsSL "https://raw.githubusercontent.com/ahmetb/kubectx/${KUBECTX_VERSION}/completion/_kubens.zsh" -o "/tmp/_kubens.zsh"
+        sudo install -o root -g root -m 0644 /tmp/_kubectx.zsh "$ZSH_COMPLETION_DIR/_kubectx"
+        sudo install -o root -g root -m 0644 /tmp/_kubens.zsh "$ZSH_COMPLETION_DIR/_kubens"
+
         # Cleanup
-        rm /tmp/kubectx.tar.gz /tmp/kubectx /tmp/kubens
+        rm /tmp/kubectx.tar.gz /tmp/kubectx /tmp/kubens /tmp/_kubectx.zsh /tmp/_kubens.zsh
         ;;
       'macOS')
         brew install kubectx
