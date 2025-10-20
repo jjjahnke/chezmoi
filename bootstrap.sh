@@ -210,6 +210,50 @@ else
 fi
 
 
+# --- Data Processing Tools ---
+
+# Install jq
+if ! command_exists jq; then
+    echo "jq not found. Installing..."
+    case "$DISTRO" in
+      'ubuntu' | 'debian')
+        sudo apt-get install -y jq
+        ;;
+      'fedora' | 'centos' | 'rhel')
+        sudo dnf install -y jq
+        ;;
+      'macOS')
+        brew install jq
+        ;;
+    esac
+else
+    echo "jq is already installed."
+fi
+
+# Install yq
+if ! command_exists yq; then
+    echo "yq not found. Installing..."
+    case "$DISTRO" in
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
+        YQ_VERSION="v4.44.2"
+        YQ_ARCH="amd64"
+        if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
+            YQ_ARCH="arm64"
+        fi
+        curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH}" -o "/tmp/yq"
+        sudo install -o root -g root -m 0755 /tmp/yq /usr/local/bin/yq
+        rm /tmp/yq
+        ;;
+      'macOS')
+        brew install yq
+        ;;
+    esac
+else
+    echo "yq is already installed."
+fi
+
+
+
 
 # --- Go Environment Provisioning ---
 
