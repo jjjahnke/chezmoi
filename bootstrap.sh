@@ -176,12 +176,13 @@ if ! command_exists kubectx; then
             KUBE_ARCH="arm64"
         fi
         
-        # Download and extract
+        # Download kubectx binary
         curl -fsSL "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubectx_${KUBECTX_VERSION}_linux_${KUBE_ARCH}.tar.gz" -o "/tmp/kubectx.tar.gz"
-        tar -xzf /tmp/kubectx.tar.gz -C /tmp
-        
-        # Install binaries
+        tar -xzf /tmp/kubectx.tar.gz -C /tmp kubectx
         sudo install -o root -g root -m 0755 /tmp/kubectx /usr/local/bin/kubectx
+
+        # Download kubens script
+        curl -fsSL "https://raw.githubusercontent.com/ahmetb/kubectx/${KUBECTX_VERSION}/kubens" -o "/tmp/kubens"
         sudo install -o root -g root -m 0755 /tmp/kubens /usr/local/bin/kubens
         
         # Cleanup
