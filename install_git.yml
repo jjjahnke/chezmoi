@@ -66,9 +66,10 @@
 
     - name: Initialize chezmoi from local clone
       ansible.builtin.shell:
-        cmd: /home/jahnke/.local/bin/chezmoi init --apply --source /tmp/chezmoi
+        cmd: chezmoi init --apply --source /tmp/chezmoi
       become: yes
       become_user: jahnke
       environment:
+        PATH: "/home/jahnke/.local/bin:{{ ansible_env.PATH }}"
         VAULT_ADDR: "http://192.168.150.210:30200"
         VAULT_TOKEN: "{{ vault_token | trim }}"

@@ -1,0 +1,14 @@
+# Ignore project-specific files and directories
+.git
+.gitignore
+.chezmoiignore
+README.md
+bootstrap.sh
+install_git.yml
+invoke_playbook.sh
+vault_setup.md
+vault_vars.yml
+
+# Ignore entire directories
+/spec
+/scripts
