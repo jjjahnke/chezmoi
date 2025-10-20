@@ -68,3 +68,13 @@ if [ -d "$KUBECONFIG_DIR" ]; then
     export KUBECONFIG="${KUBECONFIG_FILES%:}" # Remove trailing colon
   fi
 fi
+
+# --- Kubernetes Aliases ---
+alias k=kubectl
+alias kcx=kubectx
+alias kns=kubens
+
+# Enable completion for aliases
+compdef _kubectl k
+compdef _kubectx kcx
+compdef _kubens kns
