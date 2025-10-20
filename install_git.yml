@@ -64,9 +64,9 @@
       become: yes
       become_user: jahnke
 
-    - name: Initialize chezmoi from local clone
+    - name: Initialize chezmoi from repository
       ansible.builtin.shell:
-        cmd: chezmoi init --apply --source /tmp/chezmoi
+        cmd: chezmoi init --apply jjjahnke/chezmoi
       become: yes
       become_user: jahnke
       environment:
