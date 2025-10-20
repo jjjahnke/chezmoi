@@ -1,5 +1,7 @@
 # Specification: Adding a Personal API Key from Vault
 
+**Status:** Completed (2025-10-19)
+
 This document outlines the steps required to add a new personal environment variable, `GEMINI_API_KEY`, to the declarative environment. The value for this key will be securely sourced from HashiCorp Vault and will only be applied to machines designated as "personal".
 
 This process adheres to the established architectural pattern of separating configurations and secrets based on the machine's context (i.e., "work" vs. "personal").
