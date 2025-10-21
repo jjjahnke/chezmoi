@@ -143,3 +143,37 @@ This architecture extends seamlessly to ephemeral environments.
 
 -   **Docker:** A pattern using `chezmoi init --one-shot` is provided in the design documents to build fully-configured, self-contained Docker images.
 -   **Kubernetes:** The system can be integrated with Kubernetes Init Containers to configure a pod's environment at runtime. For secret management, the recommended pattern is to use the **External Secrets Operator** to synchronize secrets from Vault into native Kubernetes Secret objects.
+
+## Building the Dockerized Environment
+
+This repository includes a `Dockerfile` to build a self-contained, pre-baked development environment with all tools installed.
+
+### Prerequisites
+
+*   Docker with `buildx` enabled (this is the default on modern Docker Desktop installations).
+
+### Building for a Single Architecture (e.g., on your local machine)
+
+This is the standard build command. It will create an image that matches the architecture of your current machine.
+
+```bash
+# On an Apple Silicon Mac, this builds an arm64 image.
+# On a Linux AMD64 machine, this builds an amd64 image.
+docker build -t jahnke/dev-env:latest .
+```
+
+### Building a Multi-Arch Image (for use on both Mac and Linux)
+
+To create a single image tag that works on both `arm64` (Apple Silicon) and `amd64` (Linux/Intel) machines, use the `docker buildx` command. This command builds the image for both architectures and pushes them to a container registry.
+
+When a user on an Apple Silicon Mac runs `docker pull jahnke/dev-env:latest`, Docker will automatically download the `arm64` variant. When a user on a Linux machine does the same, Docker will pull the `amd64` variant.
+
+```bash
+# 1. Create a new builder instance (only needs to be done once)
+docker buildx create --name multi-arch-builder --use
+
+# 2. Build and push the multi-arch image to a registry
+# (Replace 'jahnke' with your Docker Hub username or registry)
+docker buildx build --platform linux/amd64,linux/arm64 -t jahnke/dev-env:latest --push .
+```
+*Note: You must `--push` a multi-arch image; you cannot load it directly into your local Docker daemon.*
