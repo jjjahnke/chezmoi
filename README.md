@@ -177,3 +177,28 @@ docker buildx create --name multi-arch-builder --use
 docker buildx build --platform linux/amd64,linux/arm64 -t jahnke/dev-env:latest --push .
 ```
 *Note: You must `--push` a multi-arch image; you cannot load it directly into your local Docker daemon.*
+
+## Makefile Workflow
+
+A `Makefile` is provided to simplify the build and run process.
+
+### Prerequisites
+*   For `make run`, the `vault` CLI must be installed and authenticated on the machine where you are running the command.
+
+### Build the Image
+This command builds the Docker image using the `Dockerfile`.
+
+```bash
+make build
+```
+
+### Run a Development Container
+This command uses the helper script to securely fetch a Vault token and start a new, interactive container. The container will be automatically removed when you exit.
+
+```bash
+# Start a container with a random name
+make run
+
+# Start a container with a specific name
+make run CONTAINER_NAME=my-dev-session
+```
