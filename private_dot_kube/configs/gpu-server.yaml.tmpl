@@ -1,7 +1,7 @@
 apiVersion: v1
 clusters:
   - cluster:
-      certificate-authority-data: '{{ (vault "secret/kube/personal/gpu-server").data.data.ca_crt }}'
+      certificate-authority-data: '{{ (vault "kube/personal/gpu-server").data.data.ca_crt }}'
       server: https://192.168.150.210:6443
     name: gpu-cluster
 contexts:
@@ -16,5 +16,5 @@ preferences: {}
 users:
   - name: gpu-cluster
     user:
-      client-certificate-data: '{{ (vault "secret/kube/personal/gpu-server").data.data.client_crt }}'
-      client-key-data: '{{ (vault "secret/kube/personal/gpu-server").data.data.client_key }}'
+      client-certificate-data: '{{ (vault "kube/personal/gpu-server").data.data.client_crt }}'
+      client-key-data: '{{ (vault "kube/personal/gpu-server").data.data.client_key }}'
