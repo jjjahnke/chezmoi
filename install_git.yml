@@ -106,17 +106,13 @@
         mode: '0600'
       when: vault_status.status == 200
 
-    - name: Initialize chezmoi from repository using AppRole
+    - name: Initialize chezmoi from repository
       ansible.builtin.shell:
-        cmd: |
-          source /home/jahnke/.vault-credentials
-          export VAULT_TOKEN=$(vault write -format=json auth/approle/login role_id="$ROLE_ID" secret_id="$SECRET_ID" | jq -r .auth.client_token)
-          chezmoi init --apply jjjahnke/chezmoi
-      args:
-        executable: /bin/bash
+        cmd: chezmoi init --apply jjjahnke/chezmoi
       become: yes
       become_user: jahnke
       environment:
         PATH: "/home/jahnke/.local/bin:{{ ansible_env.PATH }}"
         VAULT_ADDR: "{{ vault_addr }}"
+        VAULT_TOKEN: "{{ vault_token }}"
       when: vault_status.status == 200
