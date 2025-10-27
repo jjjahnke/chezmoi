@@ -29,7 +29,10 @@ fi
 
 {{ if or (not (hasKey . "machineType")) (ne .machineType "work") -}}
 # --- Personal Environment Variables ---
-export GEMINI_API_KEY="{{ (vault "secret/personal/api-keys").data.data.gemini_api_key }}"
+# Lazily load the Gemini API key from Vault if a token is available.
+if [ -n "$VAULT_TOKEN" ]; then
+  export GEMINI_API_KEY=$(vault kv get -format=json secret/personal/api-keys | jq -r .data.data.gemini_api_key)
+fi
 {{- end }}
 
 # --- Zsh History Configuration ---
