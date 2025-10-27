@@ -4,6 +4,7 @@
   become: yes
   vars_files:
     - vault_vars.yml
+    - secrets.yml
   tasks:
     - name: Check if git is installed
       ansible.builtin.shell: command -v git
@@ -64,12 +65,58 @@
       become: yes
       become_user: jahnke
 
-    - name: Initialize chezmoi from repository
+    - name: Check if Vault server is reachable
+      ansible.builtin.uri:
+        url: "{{ vault_addr }}"
+        method: GET
+        timeout: 5
+      register: vault_status
+      ignore_errors: true
+
+    - name: Get AppRole RoleID
       ansible.builtin.shell:
-        cmd: chezmoi init --apply jjjahnke/chezmoi
+        cmd: vault read -format=json auth/approle/role/chezmoi-vm/role-id
+      become: yes
+      become_user: jahnke
+      environment:
+        VAULT_ADDR: "{{ vault_addr }}"
+        VAULT_TOKEN: "{{ vault_token }}"
+      register: role_id_result
+      when: vault_status.status == 200
+
+    - name: Generate AppRole SecretID
+      ansible.builtin.shell:
+        cmd: vault write -f -format=json auth/approle/role/chezmoi-vm/secret-id
+      become: yes
+      become_user: jahnke
+      environment:
+        VAULT_ADDR: "{{ vault_addr }}"
+        VAULT_TOKEN: "{{ vault_token }}"
+      register: secret_id_result
+      when: vault_status.status == 200
+
+    - name: Store Vault AppRole credentials on the VM
+      ansible.builtin.copy:
+        content: |
+          ROLE_ID="{{ (role_id_result.stdout | from_json).data.role_id }}"
+          SECRET_ID="{{ (secret_id_result.stdout | from_json).data.secret_id }}"
+        dest: "/home/jahnke/.vault-credentials"
+        owner: jahnke
+        group: jahnke
+        mode: '0600'
+      when: vault_status.status == 200
+
+    - name: Initialize chezmoi from repository using AppRole
+      ansible.builtin.shell:
+        cmd: |
+          source /home/jahnke/.vault-credentials
+          export VAULT_TOKEN=$(vault write -format=json auth/approle/login role_id="$ROLE_ID" secret_id="$SECRET_ID" | jq -r .auth.client_token)
+          chezmoi init --apply jjjahnke/chezmoi
+      args:
+        executable: /bin/bash
       become: yes
       become_user: jahnke
       environment:
         PATH: "/home/jahnke/.local/bin:{{ ansible_env.PATH }}"
-        VAULT_ADDR: "http://192.168.150.210:30200"
-        VAULT_TOKEN: "{{ vault_token | trim }}"
+        VAULT_ADDR: "{{ vault_addr }}"
+      when: vault_status.status == 200

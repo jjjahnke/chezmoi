@@ -20,6 +20,13 @@ eval "$(pyenv init -)"
 # --- Vault Configuration ---
 export VAULT_ADDR={{ .data.vault_addr | quote }}
 
+# --- Vault AppRole Authentication ---
+# Automatically log in to Vault using AppRole credentials if they exist.
+if [ -f "$HOME/.vault-credentials" ]; then
+  source "$HOME/.vault-credentials"
+  export VAULT_TOKEN=$(vault write -format=json auth/approle/login role_id="$ROLE_ID" secret_id="$SECRET_ID" | jq -r .auth.client_token)
+fi
+
 {{ if or (not (hasKey . "machineType")) (ne .machineType "work") -}}
 # --- Personal Environment Variables ---
 export GEMINI_API_KEY="{{ (vault "secret/personal/api-keys").data.data.gemini_api_key }}"

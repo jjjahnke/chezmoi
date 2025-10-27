@@ -4,3 +4,4 @@ vault_pass.txt
 
 # Vault Commands for kubectl config files
 vault_commands_for*.sh
+repopulate_vault.sh
