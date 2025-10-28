@@ -253,6 +253,26 @@ else
 fi
 
 
+# --- Web Server Tools ---
+
+# Install Caddy
+if ! command_exists caddy; then
+    echo "Caddy not found. Installing..."
+    case "$DISTRO" in
+      'ubuntu' | 'debian')
+        sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+        sudo apt-get update
+        sudo apt-get install -y caddy
+        ;;
+      'macOS')
+        brew install caddy
+        ;;
+    esac
+else
+    echo "Caddy is already installed."
+fi
 
 
 # --- Go Environment Provisioning ---

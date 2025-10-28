@@ -137,6 +137,23 @@ To add a new cluster configuration, follow these steps:
 
 After adding the file and running `chezmoi apply`, the new cluster context will be automatically available to `kubectl`, `kubectx`, and other Kubernetes tools.
 
+## GitHub Copilot Proxy for Self-Hosted LLMs
+
+The `copilot-proxy` directory contains a `Caddyfile` to run a local reverse proxy. This allows you to redirect GitHub Copilot's API requests from the default endpoint to a self-hosted Large Language Model (LLM) running on a remote server (e.g., a GPU server on your local network).
+
+This is useful for leveraging custom or open-source models with Copilot in your editor.
+
+### How It Works
+The `Caddyfile` is configured to listen on `localhost:11434` (the default Ollama port) and forward all traffic to the remote LLM server.
+
+### Usage
+To start the proxy, navigate to the `copilot-proxy` directory and run Caddy:
+```bash
+cd copilot-proxy
+caddy run
+```
+You will then need to configure your code editor's GitHub Copilot extension to point to `http://localhost:11434`.
+
 ## Containerized and Cloud-Native Environments
 
 This architecture extends seamlessly to ephemeral environments.

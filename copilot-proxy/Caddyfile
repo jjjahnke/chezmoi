@@ -1,0 +1,7 @@
+# This Caddyfile configures a simple reverse proxy.
+# It listens on the default Ollama port on localhost and forwards all
+# traffic to your remote GPU server.
+
+http://localhost:11434 {
+    reverse_proxy http://192.168.150.15:11434
+}
