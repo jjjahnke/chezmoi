@@ -12,9 +12,19 @@ setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 
 # --- Zsh Completion ---
+# Add Homebrew's site-functions to fpath for macOS to pick up completions.
+{{ if eq .chezmoi.os "darwin" -}}
+fpath=($(brew --prefix)/share/zsh/site-functions $fpath)
+{{ end -}}
+
 # Initializes the Zsh completion system.
 autoload -U compinit
 compinit
+
+# Source kubectl completions if kubectl is installed.
+if command -v kubectl &> /dev/null; then
+  source <(kubectl completion zsh)
+fi
 
 # --- Version Banner ---
 echo "Now using node v$(node --version | sed 's/v//')"
