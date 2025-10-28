@@ -1,0 +1,36 @@
+# ------------------------------------------------------------------------------
+# Zsh Profile - Managed by chezmoi
+# ------------------------------------------------------------------------------
+
+# --- User-local binaries ---
+export PATH="$HOME/.local/bin:$PATH"
+
+# --- Go lang configuration ---
+export PATH=$PATH:$HOME/.local/go/bin
+
+# --- NVM configuration ---
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+
+# --- pyenv configuration ---
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+# --- Vault Configuration ---
+export VAULT_ADDR={{ .data.vault_addr | quote }}
+
+# --- Vault AppRole Authentication ---
+# Automatically log in to Vault using AppRole credentials if they exist.
+if [ -f "$HOME/.vault-credentials" ]; then
+  source "$HOME/.vault-credentials"
+  export VAULT_TOKEN=$(vault write -format=json auth/approle/login role_id="$ROLE_ID" secret_id="$SECRET_ID" | jq -r .auth.client_token)
+fi
+
+{{ if or (not (hasKey . "machineType")) (ne .machineType "work") -}}
+# --- Personal Environment Variables ---
+# Lazily load the Gemini API key from Vault if a token is available.
+if [ -n "$VAULT_TOKEN" ]; then
+  export GEMINI_API_KEY=$(vault kv get -format=json secret/personal/api-keys | jq -r .data.data.gemini_api_key)
+fi
+{{- end }}
