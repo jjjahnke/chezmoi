@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# This is a TEMPLATE for repopulating your HashiCorp Vault instance.
+# To use it, copy this file to 'repopulate_vault.sh', which is git-ignored.
+#
+# DO NOT PUT SECRETS IN THIS FILE.
+#
+# INSTRUCTIONS:
+# 1. Copy this file: `cp repopulate_vault.sh.tmpl repopulate_vault.sh`
+# 2. Edit `repopulate_vault.sh` and replace all placeholder values.
+# 3. Make sure you are authenticated with your Vault server (e.g., `export VAULT_TOKEN=root`).
+# 4. Run the script: `bash ./repopulate_vault.sh`
+#
+
+echo "--- Repopulating Vault Secrets ---"
+
+# --- AWS Credentials ---
+echo "Writing AWS credentials..."
+vault kv put secret/personal/aws/default AccessKeyID="REPLACE_WITH_DEFAULT_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_DEFAULT_AWS_SECRET_ACCESS_KEY"
+vault kv put secret/personal/aws/rg AccessKeyID="REPLACE_WITH_RG_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_RG_AWS_SECRET_ACCESS_KEY"
+vault kv put secret/personal/aws/to AccessKeyID="REPLACE_WITH_TO_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_TO_AWS_SECRET_ACCESS_KEY"
+
+# --- Kubernetes Cluster Credentials ---
+echo "Writing Kubernetes credentials..."
+vault kv put secret/kube/personal/gpu-server ca_crt="REPLACE_WITH_GPU_SERVER_CA_CRT" client_crt="REPLACE_WITH_GPU_SERVER_CLIENT_CRT" client_key="REPLACE_WITH_GPU_SERVER_CLIENT_KEY"
+
+# --- API Keys ---
+echo "Writing API keys..."
+vault kv put secret/personal/api-keys gemini_api_key="REPLACE_WITH_GEMINI_API_KEY"
+vault kv put secret/dev/api-keys github_token="REPLACE_WITH_GITHUB_TOKEN"
+
+# --- User Identity ---
+echo "Writing user identity secrets..."
+vault kv put secret/work/identity email="REPLACE_WITH_WORK_EMAIL"
+vault kv put secret/personal/identity email="REPLACE_WITH_PERSONAL_EMAIL"
+vault kv put secret/dev/identity name="REPLACE_WITH_DEV_NAME" email="REPLACE_WITH_DEV_EMAIL" gpg_key_id="REPLACE_WITH_DEV_GPG_KEY_ID"
+
+# --- Example Secrets (from documentation) ---
+# These were found in your documentation and are included here as examples.
+# You may or may not need to populate them.
+echo "Writing example secrets (optional)..."
+vault kv put secret/kube/my-new-cluster token="REPLACE_WITH_EXAMPLE_KUBE_TOKEN"
+vault kv put secret/dev/myapplication api-key="REPLACE_WITH_EXAMPLE_APP_API_KEY"
+vault kv put secret/data/prod/postgres username="REPLACE_WITH_EXAMPLE_DB_USERNAME" password="REPLACE_WITH_EXAMPLE_DB_PASSWORD"
+
+
+echo "--- Vault Repopulation Script Finished ---"
