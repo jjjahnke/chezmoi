@@ -34,3 +34,15 @@ if [ -n "$VAULT_TOKEN" ]; then
   export GEMINI_API_KEY=$(vault kv get -format=json secret/personal/api-keys | jq -r .data.data.gemini_api_key)
 fi
 {{- end }}
+
+# --- AWS SDK Configuration ---
+# Tells the AWS SDK to load configuration from the ~/.aws/config file.
+export AWS_SDK_LOAD_CONFIG=true
+
+# --- macOS Terminal Colors ---
+{{ if eq .chezmoi.os "darwin" -}}
+# Enable colored output for tools like ls and grep.
+export CLICOLOR=1
+# Define the color scheme for ls.
+export LSCOLORS=GxFxCxDxBxegedabagaced
+{{ end -}}

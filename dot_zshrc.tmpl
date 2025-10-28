@@ -2,6 +2,23 @@
 # Zsh Configuration - Managed by chezmoi
 # ------------------------------------------------------------------------------
 
+# --- Path Helper Functions ---
+# Safely append a directory to the PATH.
+appendpath() {
+  if [[ -d "$1" ]]; then
+    typeset -U path
+    path+=("$1")
+  fi
+}
+
+# Safely prepend a directory to the PATH.
+prependpath() {
+  if [[ -d "$1" ]]; then
+    typeset -U path
+    path=("$1" $path)
+  fi
+}
+
 # --- Zsh History Configuration ---
 HISTFILE=~/.zsh_history
 HISTSIZE=10000
