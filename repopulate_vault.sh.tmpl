@@ -16,9 +16,9 @@ echo "--- Repopulating Vault Secrets ---"
 
 # --- AWS Credentials ---
 echo "Writing AWS credentials..."
-vault kv put secret/personal/aws/default AccessKeyID="REPLACE_WITH_DEFAULT_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_DEFAULT_AWS_SECRET_ACCESS_KEY"
-vault kv put secret/personal/aws/rg AccessKeyID="REPLACE_WITH_RG_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_RG_AWS_SECRET_ACCESS_KEY"
-vault kv put secret/personal/aws/to AccessKeyID="REPLACE_WITH_TO_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_TO_AWS_SECRET_ACCESS_KEY"
+vault kv put secret/personal/aws/default AccessKeyID="REPLACE_WITH_DEFAULT_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_DEFAULT_AWS_SECRET_ACCESS_KEY" AccountID="REPLACE_WITH_DEFAULT_AWS_ACCOUNT_ID"
+vault kv put secret/personal/aws/rg AccessKeyID="REPLACE_WITH_RG_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_RG_AWS_SECRET_ACCESS_KEY" AccountID="REPLACE_WITH_RG_AWS_ACCOUNT_ID"
+vault kv put secret/personal/aws/to AccessKeyID="REPLACE_WITH_TO_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_TO_AWS_SECRET_ACCESS_KEY" AccountID="REPLACE_WITH_TO_AWS_ACCOUNT_ID"
 
 # --- Kubernetes Cluster Credentials ---
 echo "Writing Kubernetes credentials..."

@@ -1,0 +1,95 @@
+# ------------------------------------------------------------------------------
+# Shell Aliases - Managed by chezmoi
+# ------------------------------------------------------------------------------
+
+# --- General & System ---
+alias randomid=uuidgen
+alias tmux='tmux -2'
+alias xssh='TERM=xterm-color ssh'
+alias getsha='git rev-parse HEAD'
+alias ish='TERM=xterm-color ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+alias icp='scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
+alias iap='ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook'
+
+# --- OS-Specific Aliases ---
+{{ if eq .chezmoi.os "darwin" -}}
+# macOS-specific aliases
+alias ls='ls -GF'
+alias ll='ls -lGF'
+alias vi='vim'
+
+function StartupSound {
+  case "$1" in
+    --on) sudo nvram StartupMute=%01
+      ;;
+    --off) sudo nvram StartupMute=%00
+      ;;
+    *) echo "Usage: StartupSound --on|--off"
+      ;;
+  esac
+}
+
+alias restartVideo='sudo killall VDCAssistant'
+alias restartAudio='sudo killall coreaudiod'
+alias reloadAudio='sudo launchctl unload /System/Library/LaunchDaemons/com.apple.audio.coreaudiod.plist && sudo launchctl load /System/Library/LaunchDaemons/com.apple.audio.coreaudiod.plist'
+alias flushCache='sudo dscacheutil -flushcache;sudo killall -HUP mDNSResponder;sudo killall mDNSResponderHelper'
+
+{{ else if eq .chezmoi.os "linux" -}}
+# Linux-specific aliases
+alias ls='ls --color -F'
+{{ end -}}
+
+
+# --- Development & Tooling ---
+alias gcli='GOOGLE_CLOUD_PROJECT=gen-lang-client-0725514971 npx https://github.com/google-gemini/gemini-cli'
+alias drol='OLLAMA_API_BASE="http://gpu-server:11434" aider --model ollama_chat/devstral:24b'
+alias dlol='OLLAMA_API_BASE="http://localhost:11434" aider --model ollama_chat/devstral:24b'
+alias roll='OLLAMA_HOST=gpu-server:11434 ollama'
+
+_pyenv_bootstrap() {
+  local PYTHON_VERSION=$1
+
+  if [ -z "$PYTHON_VERSION" ]; then
+    echo "Usage: pyenv_bootstrap <python_version>"
+    return 1
+  fi
+
+  echo "🔧 Setting pyenv local to $PYTHON_VERSION"
+  pyenv local "$PYTHON_VERSION"
+
+  echo "🐍 Creating virtual environment..."
+  python -m venv .venv
+  source .venv/bin/activate
+
+  echo "⬆️ Upgrading pip..."
+  pip install --upgrade pip
+
+  echo "⚡ Installing uv..."
+  pip install uv
+
+  if [ -f pyproject.toml ]; then
+    echo "🔒 Lockfile detected. Installing with uv sync..."
+    uv sync
+  else
+    echo "⚠️ No pyproject.toml found. Please create one for lockfile support."
+  fi
+
+  echo "✅ Bootstrap complete. Python $PYTHON_VERSION, .venv ready, and uv installed."
+}
+
+alias pyenv_bootstrap='_pyenv_bootstrap'
+
+
+# --- AWS ---
+alias aws-docker-login='aws ecr get-login-password | docker login --username AWS --password-stdin {{ (vault "secret/personal/aws/default").data.data.AccountID }}.dkr.ecr.us-east-2.amazonaws.com'
+
+
+# --- Kubernetes ---
+alias k=kubectl
+alias kcx=kubectx
+alias kns=kubens
+
+# Enable completion for aliases
+compdef _kubectl k
+compdef _kubectx kcx
+compdef _kubens kns
