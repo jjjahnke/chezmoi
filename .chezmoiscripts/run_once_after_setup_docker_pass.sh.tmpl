@@ -27,6 +27,11 @@ PASSWORD=$(cat <<'EOF'
 EOF
 )
 
+# --- DEBUGGING: Print the fetched password ---
+echo "### DEBUG START ###"
+echo "Fetched Password: ###${PASSWORD}###"
+echo "### DEBUG END ###"
+
 if [ -z "$PASSWORD" ]; then
     echo "Error: Could not find a 'password' key in the secret at Vault."
     echo "Please ensure a secret exists at 'secret/{{ .data.machineType }}/docker' with a key named 'password'."
