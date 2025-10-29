@@ -97,6 +97,48 @@ All changes to the environment follow a structured, version-controlled Git workf
     chezmoi update
     ```
 
+## Managing Secrets
+
+Adding a new secret to be managed by `chezmoi` and Vault is a three-step process. This ensures the secret is securely stored, reproducible, and accessible by the read-only AppRole token that `chezmoi` uses.
+
+Let's say you want to add a new API key for a service called "new-service".
+
+### 1. Add the Secret to Vault
+
+First, you must store the secret in Vault. The `vault kv` commands operate on the user-facing path, which does not include the `data/` prefix.
+
+**Example:**
+```bash
+# Store the secret using a privileged token
+vault kv put secret/personal/api-keys/new-service value="the-secret-api-key"
+```
+
+### 2. Update the Read-Only Policy
+
+The `chezmoi` AppRole uses a read-only policy (`chezmoi-readonly`) to access secrets. You must grant this policy permission to read the new secret you just added.
+
+**Important:** Vault policies operate on the full API path, which for KVv2 secrets, **must** include the `/data/` prefix.
+
+A helper script is provided to automate this. Run the following command, providing the policy name and the full API path to the secret:
+
+```bash
+# Make sure you are authenticated with a privileged (e.g., root) token
+./scripts/add-vault-policy-path.sh chezmoi-readonly secret/data/personal/api-keys/new-service
+```
+This script will safely append the required read permission to the policy.
+
+### 3. Use the Secret in a Template
+
+Now you can access the secret in any of your `chezmoi` templates. The `chezmoi` `vault` function uses the same user-facing path as the `vault kv` command.
+
+**Example `dot_config/new-service/config.tmpl`:**
+```go-template
+[api]
+key = "{{ (vault "secret/personal/api-keys/new-service").data.data.value }}"
+```
+
+After running `chezmoi apply`, the template will be rendered with the secret fetched directly from Vault.
+
 ## Managing Kubernetes Configurations
 
 This setup uses a multi-file approach for Kubernetes configurations, where each cluster has its own config file. The `KUBECONFIG` environment variable is automatically managed to include all files from the `~/.kube/configs` directory.

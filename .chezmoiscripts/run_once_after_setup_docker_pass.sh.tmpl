@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+# This script is run once to securely store Docker credentials in pass.
+# It requires a GPG key to be configured for the user.
+
+set -eufo pipefail
+
+# This is the standard path 'pass' uses for the Docker Hub registry
+PASS_PATH="docker-logins/index.docker.io"
+
+echo "Checking for Docker credentials in pass..."
+
+# Only run if the credential is not already in the store
+if pass show "${PASS_PATH}" >/dev/null 2>&1; then
+    echo "Credential for ${PASS_PATH}" already exists in pass. Skipping."
+    exit 0
+fi
+
+# Construct the Vault path based on the machine type (work/personal)
+# and fetch the password.
+# The secret in Vault should have a key named 'password'.
+# Example Vault secret: vault kv put secret/personal/docker password="dckr_pat_..."
+echo "Credential not found. Fetching from Vault..."
+PASSWORD="{{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}"
+
+if [ -z "$PASSWORD" ]; then
+    echo "Error: Could not find a 'password' key in the secret at Vault."
+    echo "Please ensure a secret exists at 'secret/{{ .data.machineType }}/docker' with a key named 'password'."
+    exit 1
+fi
+
+# Pipe the password to 'pass'. 'pass' will encrypt it with your GPG key.
+# The first line of the secret in pass should be the password/token.
+printf "%s\n" "$PASSWORD" | pass insert -e -m "${PASS_PATH}"
+
+echo "Successfully stored Docker credentials for ${PASS_PATH}" in pass."
+

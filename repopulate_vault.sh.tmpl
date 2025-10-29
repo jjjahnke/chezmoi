@@ -29,6 +29,10 @@ echo "Writing API keys..."
 vault kv put secret/personal/api-keys gemini_api_key="REPLACE_WITH_GEMINI_API_KEY"
 vault kv put secret/dev/api-keys github_token="REPLACE_WITH_GITHUB_TOKEN"
 
+# --- Docker Credentials ---
+echo "Writing Docker credentials..."
+vault kv put secret/personal/docker password="REPLACE_WITH_DOCKER_PASSWORD_OR_TOKEN"
+
 # --- User Identity ---
 echo "Writing user identity secrets..."
 vault kv put secret/work/identity email="REPLACE_WITH_WORK_EMAIL"
@@ -42,6 +46,33 @@ echo "Writing example secrets (optional)..."
 vault kv put secret/kube/my-new-cluster token="REPLACE_WITH_EXAMPLE_KUBE_TOKEN"
 vault kv put secret/dev/myapplication api-key="REPLACE_WITH_EXAMPLE_APP_API_KEY"
 vault kv put secret/data/prod/postgres username="REPLACE_WITH_EXAMPLE_DB_USERNAME" password="REPLACE_WITH_EXAMPLE_DB_PASSWORD"
+
+
+# --- Vault Policies ---
+# This section creates the read-only policy that chezmoi's AppRole will use.
+# It is written idempotently, meaning it overwrites the policy with the correct
+# permissions every time the script is run.
+echo "Writing chezmoi-readonly policy..."
+vault policy write chezmoi-readonly - <<EOF
+# Allow reading all secrets required by chezmoi templates.
+# Note: Policies require the full API path, including '/data/'.
+
+path "secret/data/personal/aws/default" { capabilities = ["read"] }
+path "secret/data/personal/aws/rg" { capabilities = ["read"] }
+path "secret/data/personal/aws/to" { capabilities = ["read"] }
+path "secret/data/kube/personal/gpu-server" { capabilities = ["read"] }
+path "secret/data/personal/api-keys" { capabilities = ["read"] }
+path "secret/data/dev/api-keys" { capabilities = ["read"] }
+path "secret/data/work/identity" { capabilities = ["read"] }
+path "secret/data/personal/identity" { capabilities = ["read"] }
+path "secret/data/dev/identity" { capabilities = ["read"] }
+path "secret/data/personal/docker" { capabilities = ["read"] }
+
+# Example secret paths from documentation
+path "secret/data/kube/my-new-cluster" { capabilities = ["read"] }
+path "secret/data/dev/myapplication" { capabilities = ["read"] }
+path "secret/data/prod/postgres" { capabilities = ["read"] }
+EOF
 
 
 echo "--- Vault Repopulation Script Finished ---"
