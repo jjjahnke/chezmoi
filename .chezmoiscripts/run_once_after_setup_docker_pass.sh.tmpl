@@ -21,7 +21,7 @@ echo "Credential not found. Fetching from Vault and piping to pass..."
 # Use chezmoi to render *only* the secret and pipe it directly to pass.
 # This avoids all shell variable assignment and parsing issues.
 # The first line of the secret in pass should be the password/token.
-chezmoi execute-template '{{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}' | pass insert -e -m "${PASS_PATH}"
+chezmoi execute-template '{{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}' | pass insert -e "${PASS_PATH}"
 
 if [ $? -eq 0 ]; then
     echo "Successfully stored Docker credentials for ${PASS_PATH} in pass."
