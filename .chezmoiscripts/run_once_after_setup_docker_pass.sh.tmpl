@@ -25,12 +25,8 @@ echo "Credential not found. Fetching from Vault..."
 # This prevents any shell interpretation of the secret's content.
 read -r -d '' PASSWORD <<'EOF'
 {{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}
-EOF
 
-# --- DEBUGGING: Print the fetched password safely ---
-echo "### DEBUG START ###"
-printf "Fetched Password: ###%s###\n" "$PASSWORD"
-echo "### DEBUG END ###"
+EOF
 
 if [ -z "$PASSWORD" ]; then
     echo "Error: Could not find a 'password' key in the secret at Vault."
