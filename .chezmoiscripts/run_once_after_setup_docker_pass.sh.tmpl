@@ -21,15 +21,15 @@ fi
 # The secret in Vault should have a key named 'password'.
 # Example Vault secret: vault kv put secret/personal/docker password="dckr_pat_..."
 echo "Credential not found. Fetching from Vault..."
-# Use a heredoc for robust assignment, preventing errors from special characters.
-PASSWORD=$(cat <<'EOF'
+# Use read with a heredoc for the most robust assignment.
+# This prevents any shell interpretation of the secret's content.
+read -r -d '' PASSWORD <<'EOF'
 {{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}
 EOF
-)
 
-# --- DEBUGGING: Print the fetched password ---
+# --- DEBUGGING: Print the fetched password safely ---
 echo "### DEBUG START ###"
-echo "Fetched Password: ###${PASSWORD}###"
+printf "Fetched Password: ###%s###\n" "$PASSWORD"
 echo "### DEBUG END ###"
 
 if [ -z "$PASSWORD" ]; then
