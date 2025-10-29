@@ -30,8 +30,10 @@ vault kv put secret/personal/api-keys gemini_api_key="REPLACE_WITH_GEMINI_API_KE
 vault kv put secret/dev/api-keys github_token="REPLACE_WITH_GITHUB_TOKEN"
 
 # --- Docker Credentials ---
+# The auth token is a base64 encoding of "username:password" or "username:access_token".
+# Generate it with a command like: echo -n "myuser:dckr_pat_..." | base64
 echo "Writing Docker credentials..."
-vault kv put secret/personal/docker password="REPLACE_WITH_DOCKER_PASSWORD_OR_TOKEN"
+vault kv put secret/personal/docker auth="REPLACE_WITH_BASE64_AUTH_TOKEN"
 
 # --- User Identity ---
 echo "Writing user identity secrets..."

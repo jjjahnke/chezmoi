@@ -113,6 +113,8 @@ First, you must store the secret in Vault. The `vault kv` commands operate on th
 vault kv put secret/personal/api-keys/new-service value="the-secret-api-key"
 ```
 
+> **Note for Docker Credentials:** The Docker secret is a special case. The key must be named `auth`, and the value must be the base64 encoding of `username:personal_access_token`. You can generate this with a command like `echo -n "myuser:dckr_pat_..." | base64` or use the `save-docker-credential.sh` script.
+
 ### 2. Update the Read-Only Policy
 
 The `chezmoi` AppRole uses a read-only policy (`chezmoi-readonly`) to access secrets. You must grant this policy permission to read the new secret you just added.

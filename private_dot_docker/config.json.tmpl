@@ -1,6 +1,7 @@
 {
     "auths": {
-        "https://index.docker.io/v1/": {}
-    },
-    "credsStore": "pass"
+        "https://index.docker.io/v1/": {
+            "auth": "{{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.auth }}"
+        }
+    }
 }
