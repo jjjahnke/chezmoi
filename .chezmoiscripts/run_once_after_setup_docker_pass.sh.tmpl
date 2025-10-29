@@ -12,31 +12,21 @@ echo "Checking for Docker credentials in pass..."
 
 # Only run if the credential is not already in the store
 if pass show "${PASS_PATH}" >/dev/null 2>&1; then
-    echo "Credential for ${PASS_PATH}" already exists in pass. Skipping."
+    echo "Credential for ${PASS_PATH} already exists in pass. Skipping."
     exit 0
 fi
 
-# Construct the Vault path based on the machine type (work/personal)
-# and fetch the password.
-# The secret in Vault should have a key named 'password'.
-# Example Vault secret: vault kv put secret/personal/docker password="dckr_pat_..."
-echo "Credential not found. Fetching from Vault..."
-# Use read with a heredoc for the most robust assignment.
-# This prevents any shell interpretation of the secret's content.
-read -r -d '' PASSWORD <<'EOF'
-{{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}
+echo "Credential not found. Fetching from Vault and piping to pass..."
 
-EOF
+# Use chezmoi to render *only* the secret and pipe it directly to pass.
+# This avoids all shell variable assignment and parsing issues.
+# The first line of the secret in pass should be the password/token.
+chezmoi execute-template '{{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}' | pass insert -e -m "${PASS_PATH}"
 
-if [ -z "$PASSWORD" ]; then
-    echo "Error: Could not find a 'password' key in the secret at Vault."
-    echo "Please ensure a secret exists at 'secret/{{ .data.machineType }}/docker' with a key named 'password'."
+if [ $? -eq 0 ]; then
+    echo "Successfully stored Docker credentials for ${PASS_PATH} in pass."
+else
+    echo "Error: Failed to store Docker credentials."
     exit 1
 fi
-
-# Pipe the password to 'pass'. 'pass' will encrypt it with your GPG key.
-# The first line of the secret in pass should be the password/token.
-printf "%s\n" "$PASSWORD" | pass insert -e -m "${PASS_PATH}"
-
-echo "Successfully stored Docker credentials for ${PASS_PATH}" in pass."
 
