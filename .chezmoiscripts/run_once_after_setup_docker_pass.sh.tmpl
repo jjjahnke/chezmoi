@@ -21,7 +21,11 @@ fi
 # The secret in Vault should have a key named 'password'.
 # Example Vault secret: vault kv put secret/personal/docker password="dckr_pat_..."
 echo "Credential not found. Fetching from Vault..."
-PASSWORD="{{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}"
+# Use a heredoc for robust assignment, preventing errors from special characters.
+PASSWORD=$(cat <<'EOF'
+{{ (vault (printf "secret/%s/docker" .data.machineType)).data.data.password }}
+EOF
+)
 
 if [ -z "$PASSWORD" ]; then
     echo "Error: Could not find a 'password' key in the secret at Vault."
