@@ -11,7 +11,7 @@ echo "Running package installation script..."
 {{ if eq .chezmoi.os "darwin" -}}
 # macOS package installation
 echo "Detected macOS. Installing packages with Homebrew..."
-brew install 
+# No packages to install on macOS at this time.
 
 {{ else if eq .chezmoi.os "linux" -}}
 # Linux package installation (Debian/Ubuntu example)
