@@ -12,12 +12,13 @@ echo "Running package installation script..."
 # macOS package installation
 echo "Detected macOS. Installing packages with Homebrew..."
 # No packages to install on macOS at this time.
+brew install gh
 
 {{ else if eq .chezmoi.os "linux" -}}
 # Linux package installation (Debian/Ubuntu example)
 echo "Detected Linux. Installing packages with apt-get..."
 sudo apt-get update
-sudo apt-get install -y 
+sudo apt-get install -y gh
 
 {{ end -}}
 

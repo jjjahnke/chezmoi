@@ -70,7 +70,16 @@ chezmoi init --apply jjjahnke/chezmoi
 
 At the conclusion of this step, your machine will be a perfect, ready-to-use replica of the defined development environment.
 
-## Daily Workflow: Managing Your Environment as Code
+### 3. Authenticate with GitHub
+
+On a new machine, you must perform a one-time login to the GitHub CLI to enable authenticated `git` operations. This is a secure, interactive process.
+
+```bash
+gh auth login
+```
+Follow the prompts. On a remote machine, it will provide a code and a URL for you to complete the authentication in your local browser.
+
+## 4. Daily Workflow: Managing Your Environment as Code
 
 All changes to the environment follow a structured, version-controlled Git workflow.
 
