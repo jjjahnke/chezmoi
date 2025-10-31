@@ -8,7 +8,14 @@ install_git.yml
 invoke_playbook.sh
 vault_setup.md
 vault_vars.yml
+BOOTSTRAPPING.md
+Dockerfile
+Makefile
+chezmoi-policy.hcl
+repopulate_vault.sh.tmpl
+secrets.yml
 
 # Ignore entire directories
 /spec
 /scripts
+/copilot-proxy
