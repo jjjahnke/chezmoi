@@ -77,7 +77,7 @@ The `invoke_playbook.sh` script is the recommended way to run the playbook. It h
 
 Run the script with the IP address(es) of your target machine(s):
 ```bash
-./invoke_playbook.sh 192.168.1.100
+provision.sh 192.168.1.100
 ```
 
 This command will connect to the new machine, install all software, and configure it to be a perfect replica of your defined development environment.
@@ -289,3 +289,8 @@ make run
 # Start a container with a specific name
 make run CONTAINER_NAME=my-dev-session
 ```
+
+## Future Improvements
+
+- **Explore Native `chezmoi` Vault Integration:** This repository currently uses a shell script (`repopulate_vault.sh`) to manage the `chezmoi-readonly` policy in Vault. `chezmoi` has a built-in feature to manage Vault policies directly (e.g., via a `chezmoi-policy.hcl` file). Migrating to this native feature could further simplify the setup and remove the need for a custom script.
+- **Consolidate Configuration into `.chezmoidata.toml`:** The AWS configuration uses a robust pattern where profiles are defined as data in `.chezmoidata.toml` and the templates loop through them. The Docker and Kubernetes configurations are currently more hardcoded. Refactoring them to follow the same data-driven pattern would improve consistency and make adding new registries or clusters much easier.

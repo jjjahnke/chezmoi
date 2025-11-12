@@ -14,28 +14,6 @@ if [ -z "${VAULT_ADDR:-}" ] || [ -z "${VAULT_TOKEN:-}" ]; then
     exit 1
 fi
 
-# --- Policy Definition ---
-POLICY_NAME="chezmoi-readonly"
-echo "Writing '${POLICY_NAME}' policy..."
-# This policy is sourced from the repopulate_vault.sh.tmpl script.
-# It grants read-only access to all secrets managed by chezmoi.
-vault policy write "${POLICY_NAME}" - <<EOF
-# Allow reading all secrets required by chezmoi templates.
-path "secret/data/personal/aws/default" { capabilities = ["read"] }
-path "secret/data/personal/aws/rg" { capabilities = ["read"] }
-path "secret/data/personal/aws/to" { capabilities = ["read"] }
-path "secret/data/kube/personal/gpu-server" { capabilities = ["read"] }
-path "secret/data/personal/api-keys" { capabilities = ["read"] }
-path "secret/data/dev/api-keys" { capabilities = ["read"] }
-path "secret/data/work/identity" { capabilities = ["read"] }
-path "secret/data/personal/identity" { capabilities = ["read"] }
-path "secret/data/dev/identity" { capabilities = ["read"] }
-path "secret/data/personal/docker" { capabilities = ["read"] }
-path "secret/data/kube/my-new-cluster" { capabilities = ["read"] }
-path "secret/data/dev/myapplication" { capabilities = ["read"] }
-path "secret/data/prod/postgres" { capabilities = ["read"] }
-EOF
-
 # --- AppRole Enablement ---
 # Enable the AppRole auth method if it's not already enabled.
 if ! vault auth list | grep -q "approle/"; then
@@ -47,8 +25,19 @@ fi
 
 # --- AppRole Creation ---
 ROLE_NAME="chezmoi-vm"
-echo "Creating AppRole role '${ROLE_NAME}'..."
+POLICY_NAME="chezmoi-readonly"
+echo "Creating AppRole role '${ROLE_NAME}' and attaching policy '${POLICY_NAME}'..."
+# This command assumes that the '${POLICY_NAME}' policy has already been created
+# by the repopulate_vault.sh script.
 vault write auth/approle/role/"${ROLE_NAME}" \
+    token_policies="${POLICY_NAME}" \
+    token_ttl=1h \
+    token_max_ttl=4h
+
+# --- AppRole for Dev Containers ---
+DEV_ROLE_NAME="dev-role"
+echo "Creating AppRole role '${DEV_ROLE_NAME}' for dev containers..."
+vault write auth/approle/role/"${DEV_ROLE_NAME}" \
     token_policies="${POLICY_NAME}" \
     token_ttl=1h \
     token_max_ttl=4h
