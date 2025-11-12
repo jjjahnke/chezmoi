@@ -14,8 +14,13 @@ Makefile
 chezmoi-policy.hcl
 repopulate_vault.sh.tmpl
 secrets.yml
+GEMINI.md
+provision.sh
+provision.yml
+repopulate_vault.sh
 
 # Ignore entire directories
 /spec
 /scripts
 /copilot-proxy
+/docs
