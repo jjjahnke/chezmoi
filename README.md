@@ -120,47 +120,52 @@ All changes to the environment follow a structured, version-controlled Git workf
 
 ## Managing Secrets
 
-Adding a new secret to be managed by `chezmoi` and Vault is a three-step process. This ensures the secret is securely stored, reproducible, and accessible by the read-only AppRole token that `chezmoi` uses.
+Adding a new secret to be managed by `chezmoi` and Vault is a consolidated process. The `repopulate_vault.sh` script (generated from `repopulate_vault.sh.tmpl`) serves as the single source of truth for both creating secrets and defining the policies that can access them.
 
-Let's say you want to add a new API key for a service called "new-service".
+To add a new secret (e.g., for "new-service"):
 
-### 1. Add the Secret to Vault
+### 1. Edit the Repopulation Script
 
-First, you must store the secret in Vault. The `vault kv` commands operate on the user-facing path, which does not include the `data/` prefix.
+Open your `repopulate_vault.sh` script (or the `repopulate_vault.sh.tmpl` template).
+
+**A. Add the Secret:**
+Find the appropriate section and add a `vault kv put` command for your new secret.
 
 **Example:**
 ```bash
-# Store the secret using a privileged token
+# --- API Keys ---
+echo "Writing API keys..."
 vault kv put secret/personal/api-keys/new-service value="the-secret-api-key"
 ```
 
-> **Note for Docker Credentials:** The Docker secret is a special case. The key must be named `auth`, and the value must be the base64 encoding of `username:personal_access_token`. You can generate this with a command like `echo -n "myuser:dckr_pat_..." | base64` or use the `save-docker-credential.sh` script.
+**B. Update the Policy:**
+Scroll to the bottom of the script. In the `chezmoi-readonly` policy definition, add a new `path` entry that grants read access to your new secret.
 
-### 2. Update the Read-Only Policy
+**Example:**
+```hcl
+# ... existing policy paths ...
+path "secret/data/personal/api-keys/new-service" { capabilities = ["read"] }
+EOF
+```
 
-The `chezmoi` AppRole uses a read-only policy (`chezmoi-readonly`) to access secrets. You must grant this policy permission to read the new secret you just added.
+### 2. Run the Repopulation Script
 
-**Important:** Vault policies operate on the full API path, which for KVv2 secrets, **must** include the `/data/` prefix.
-
-A helper script is provided to automate this. Run the following command, providing the policy name and the full API path to the secret:
+Run the `repopulate_vault.sh` script with a privileged token. This will create the new secret and idempotently update the `chezmoi-readonly` policy with the correct permissions.
 
 ```bash
 # Make sure you are authenticated with a privileged (e.g., root) token
-./scripts/add-vault-policy-path.sh chezmoi-readonly secret/data/personal/api-keys/new-service
+./repopulate_vault.sh
 ```
-This script will safely append the required read permission to the policy.
 
 ### 3. Use the Secret in a Template
 
-Now you can access the secret in any of your `chezmoi` templates. The `chezmoi` `vault` function uses the same user-facing path as the `vault kv` command.
+You can now access the secret in any of your `chezmoi` templates.
 
 **Example `dot_config/new-service/config.tmpl`:**
 ```go-template
 [api]
 key = "{{ (vault "secret/personal/api-keys/new-service").data.data.value }}"
 ```
-
-After running `chezmoi apply`, the template will be rendered with the secret fetched directly from Vault.
 
 ## Managing Kubernetes Configurations
 

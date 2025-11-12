@@ -3,7 +3,6 @@
 .vault_pass
 
 # Vault Commands for kubectl config files
-vault_commands_for*.sh
 repopulate_vault.sh
 
 # NPM dependency lock file
