@@ -1,6 +1,6 @@
 
 # Ansible Vault password file
-vault_pass.txt
+.vault_pass
 
 # Vault Commands for kubectl config files
 vault_commands_for*.sh

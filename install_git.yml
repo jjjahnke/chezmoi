@@ -4,7 +4,6 @@
   become: yes
   vars_files:
     - vault_vars.yml
-    - secrets.yml
   tasks:
     - name: Check if git is installed
       ansible.builtin.shell: command -v git

@@ -44,40 +44,52 @@ Once the bootstrap is complete, **`chezmoi`** takes over as the declarative orch
 
 ## Getting Started
 
-Provisioning a new machine is a simple, two-step process.
+Provisioning a new machine is a fully automated process driven by Ansible. The playbook installs all necessary tools, runs the bootstrap script, and securely provisions the machine with initial credentials for HashiCorp Vault.
 
 ### Prerequisites
-- A fresh macOS or Linux (Debian/Ubuntu or Fedora/CentOS) environment.
-- Git must be installed.
+- A fresh Linux (Debian/Ubuntu or Fedora/CentOS) environment.
+- A machine with Ansible installed to run the playbook from.
+- The IP address or hostname of the new target machine.
+- Your HashiCorp Vault root token.
+- The password for the Ansible Vault encrypted values.
 
-### 1. Execute the Bootstrap Script
+### 1. Update Configuration
 
-Run the following command in your terminal to install all foundational tools:
+Before provisioning, ensure your `vault_vars.yml` file is up to date. This file is the single source of truth for the playbook.
+
+**A. Update the Vault Address:**
+Open `vault_vars.yml` and ensure the `vault_addr` is set to the correct address of your Vault server.
+
+**B. Update the Vault Root Token:**
+The playbook requires your Vault root token to generate credentials for the new machine. This token is stored as an encrypted `!vault` string inside `vault_vars.yml`. To update it, use the provided helper script:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjjahnke/chezmoi/main/bootstrap.sh)"
+# The script will prompt you for the Ansible Vault password and the new root token.
+./scripts/update-ansible-vault-token.sh
 ```
 
-This script is idempotent and will safely install only the missing components.
+### 2. Execute the Ansible Playbook
 
-### 2. Initialize the Declarative Environment
+The `invoke_playbook.sh` script is the recommended way to run the playbook. It handles the Ansible Vault password securely.
 
-With the prerequisites installed, run the `chezmoi` command below to apply the personalized configuration from this repository. `chezmoi` will prompt for any information needed to configure the machine for its context (e.g., work vs. personal).
+- **If a `.vault_pass` file exists** in the repository root, the script will use it automatically.
+- **If it does not exist**, the script will securely prompt you to enter the password.
 
+Run the script with the IP address(es) of your target machine(s):
 ```bash
-chezmoi init --apply jjjahnke/chezmoi
+./invoke_playbook.sh 192.168.1.100
 ```
 
-At the conclusion of this step, your machine will be a perfect, ready-to-use replica of the defined development environment.
+This command will connect to the new machine, install all software, and configure it to be a perfect replica of your defined development environment.
 
 ### 3. Authenticate with GitHub
 
-On a new machine, you must perform a one-time login to the GitHub CLI to enable authenticated `git` operations. This is a secure, interactive process.
+After the playbook is finished, log in to the new machine. You must perform a one-time login to the GitHub CLI to enable authenticated `git` operations.
 
 ```bash
 gh auth login
 ```
-Follow the prompts. On a remote machine, it will provide a code and a URL for you to complete the authentication in your local browser.
+Follow the prompts. It will provide a code and a URL for you to complete the authentication in your local browser.
 
 ## 4. Daily Workflow: Managing Your Environment as Code
 

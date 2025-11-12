@@ -14,21 +14,24 @@ for ip in "$@"; do
   INVENTORY="$INVENTORY$ip,"
 done
 
-# --- Secure, Non-Interactive Ansible Vault Execution ---
+# --- Secure Ansible Vault Execution ---
 
-# 1. Create the temporary vault password file.
-echo "password" > vault_pass.txt
+VAULT_PASS_ARGS=""
+if [ -f ".vault_pass" ]; then
+  echo "Using .vault_pass file for Ansible Vault password."
+  VAULT_PASS_ARGS="--vault-password-file .vault_pass"
+else
+  echo "No .vault_pass file found."
+  VAULT_PASS_ARGS="--ask-vault-pass"
+fi
 
 echo "Running Ansible playbook against: $INVENTORY"
 
-# 2. Set Host Key Checking to False for ephemeral machines.
+# Set Host Key Checking to False for ephemeral machines.
 export ANSIBLE_HOST_KEY_CHECKING=False
 
-# 3. Execute the playbook.
-ansible-playbook -i "$INVENTORY" install_git.yml --user jahnke --vault-password-file vault_pass.txt
-
-# 4. Clean up the temporary password file immediately.
-rm vault_pass.txt
+# Execute the playbook.
+ansible-playbook -i "$INVENTORY" install_git.yml --user jahnke $VAULT_PASS_ARGS
 
 echo "Playbook execution finished."
 
