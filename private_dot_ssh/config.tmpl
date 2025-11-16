@@ -1,0 +1,9 @@
+# This SSH config is managed by chezmoi.
+
+# --- GitHub Configuration ---
+# Use the dedicated automation key for all connections to github.com.
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/chezmoi_automation_id_ed25519
+  IdentitiesOnly yes

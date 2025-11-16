@@ -22,7 +22,10 @@ vault kv put secret/personal/aws/to AccessKeyID="REPLACE_WITH_TO_AWS_ACCESS_KEY_
 
 # --- Kubernetes Cluster Credentials ---
 echo "Writing Kubernetes credentials..."
-vault kv put secret/kube/personal/gpu-server ca_crt="REPLACE_WITH_GPU_SERVER_CA_CRT" client_crt="REPLACE_WITH_GPU_SERVER_CLIENT_CRT" client_key="REPLACE_WITH_GPU_SERVER_CLIENT_KEY"
+vault kv put secret/kube/personal/gpu-server \
+  ca_crt="REPLACE_WITH_GPU_SERVER_CA_CRT" \
+  client_crt="REPLACE_WITH_GPU_SERVER_CLIENT_CRT" \
+  client_key="REPLACE_WITH_GPU_SERVER_CLIENT_KEY"
 
 # --- API Keys ---
 echo "Writing API keys..."
@@ -40,6 +43,22 @@ echo "Writing user identity secrets..."
 vault kv put secret/work/identity email="REPLACE_WITH_WORK_EMAIL"
 vault kv put secret/personal/identity email="REPLACE_WITH_PERSONAL_EMAIL"
 vault kv put secret/dev/identity name="REPLACE_WITH_DEV_NAME" email="REPLACE_WITH_DEV_EMAIL" gpg_key_id="REPLACE_WITH_DEV_GPG_KEY_ID"
+
+# --- GitHub SSH Key ---
+echo "Writing GitHub SSH key..."
+# Use a heredoc to handle the multi-line private key.
+# When editing repopulate_vault.sh, replace the entire block between
+# -----BEGIN... and ...PRIVATE KEY----- with your actual private key.
+read -r -d '' SSH_PRIVATE_KEY <<'EOF'
+-----BEGIN OPENSSH PRIVATE KEY-----
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+-----END OPENSSH PRIVATE KEY-----
+EOF
+vault kv put secret/personal/github/ssh_key private_key="$SSH_PRIVATE_KEY"
 
 # --- Example Secrets (from documentation) ---
 # These were found in your documentation and are included here as examples.
@@ -69,6 +88,7 @@ path "secret/data/work/identity" { capabilities = ["read"] }
 path "secret/data/personal/identity" { capabilities = ["read"] }
 path "secret/data/dev/identity" { capabilities = ["read"] }
 path "secret/data/personal/docker" { capabilities = ["read"] }
+path "secret/data/personal/github/ssh_key" { capabilities = ["read"] }
 
 # Example secret paths from documentation
 path "secret/data/kube/my-new-cluster" { capabilities = ["read"] }

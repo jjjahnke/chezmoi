@@ -84,12 +84,23 @@ This command will connect to the new machine, install all software, and configur
 
 ### 3. Authenticate with GitHub
 
-After the playbook is finished, log in to the new machine. You must perform a one-time login to the GitHub CLI to enable authenticated `git` operations.
+Authentication with GitHub is now **fully automated**. The Ansible playbook runs `chezmoi apply`, which provisions a dedicated SSH private key from Vault directly onto the new machine and configures Git to use it.
 
-```bash
-gh auth login
-```
-Follow the prompts. It will provide a code and a URL for you to complete the authentication in your local browser.
+**One-Time Setup:**
+To enable this automation, you must first generate an SSH key and store its private key in Vault. This is a one-time setup.
+
+1.  **Generate a new SSH key pair:**
+    ```bash
+    # Use a unique name to avoid overwriting existing keys
+    ssh-keygen -t ed25519 -C "chezmoi-automation-key" -f ~/.ssh/chezmoi_automation_id_ed25519
+    ```
+    (Press Enter for an empty passphrase when prompted).
+
+2.  **Add the public key to GitHub:**
+    Copy the contents of the newly created `~/.ssh/chezmoi_automation_id_ed25519.pub` file and add it to your GitHub account under "Settings -> SSH and GPG keys".
+
+3.  **Store the private key in Vault:**
+    Open your `repopulate_vault.sh` script and paste the entire content of your new **private key** (`~/.ssh/chezmoi_automation_id_ed25519`) into the `SSH_PRIVATE_KEY` heredoc block. Then, run the script with your root token to save the secret and update the necessary policies.
 
 ## 4. Daily Workflow: Managing Your Environment as Code
 

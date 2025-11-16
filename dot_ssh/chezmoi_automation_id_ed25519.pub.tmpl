@@ -1,0 +1,7 @@
+{{- /*
+This template generates the public key from the private key.
+It uses the `ssh-keygen` command to ensure the public key is always
+correctly derived from the private key managed by Vault.
+*/ -}}
+{{- $privateKeyPath := joinPath .chezmoi.homeDir ".ssh" "chezmoi_automation_id_ed25519" -}}
+{{- exec "ssh-keygen" "-y" "-f" $privateKeyPath -}}
