@@ -1,13 +1,6 @@
 # This SSH config is managed by chezmoi.
 
-{{ if eq .chezmoi.os "darwin" -}}
-# --- macOS Specific Configuration ---
-# Store SSH key passphrases in the macOS Keychain.
-Host *
-  UseKeychain yes
-
-{{ else -}}
-# --- Default Configuration for Linux VMs ---
+# --- GitHub Configuration (All Systems) ---
 # Use the dedicated automation key for all connections to github.com.
 Host github.com
   HostName github.com
@@ -15,4 +8,9 @@ Host github.com
   IdentityFile ~/.ssh/chezmoi_automation_id_ed25519
   IdentitiesOnly yes
 
+{{ if eq .chezmoi.os "darwin" -}}
+# --- macOS Specific Configuration ---
+# Store SSH key passphrases in the macOS Keychain.
+Host *
+  UseKeychain yes
 {{ end -}}
