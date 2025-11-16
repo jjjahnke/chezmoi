@@ -1,0 +1,5 @@
+[".ssh"]
+    type = "git-repo"
+    url = "https://github.com/jjjahnke/chezmoi.git"
+    [".ssh".clone]
+        args = ["--no-checkout"]
