@@ -116,7 +116,7 @@
       become: yes
       become_user: jahnke
       environment:
-        PATH: "/home/jahnke/.local/bin:{{ ansible_env.PATH }}"
+        PATH: "/home/jahnke/.local/bin:{{ ansible_facts["env"].PATH }}"
         VAULT_ADDR: "{{ vault_addr }}"
         VAULT_TOKEN: "{{ vault_token }}"
       when: vault_status.status == 200
