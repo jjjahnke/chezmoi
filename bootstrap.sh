@@ -97,7 +97,7 @@ case "$DISTRO" in
     sudo apt-get update
     sudo apt-get install -y build-essential curl file git unzip zlib1g-dev libbz2-dev liblzma-dev libssl-dev libsqlite3-dev libreadline-dev libffi-dev libncurses5-dev
     ;;
-  'fedora' | 'centos' | 'rhel')
+  'fedora' | 'centos' | 'rhel' | 'rocky')
     sudo dnf groupinstall -y "Development Tools"
     sudo dnf install -y curl file git unzip zlib-devel bzip2-devel xz-devel openssl-devel sqlite-devel readline-devel ffi-devel ncurses-devel
     ;;
@@ -121,7 +121,7 @@ echo "Build dependencies installed."
 if ! command_exists vault; then
     echo "Vault not found. Installing..."
     case "$DISTRO" in
-      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel' | 'rocky')
         VAULT_VERSION="1.17.1"
         VAULT_ARCH="amd64"
         if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
@@ -148,7 +148,7 @@ fi
 if ! command_exists kubectl; then
     echo "kubectl not found. Installing..."
     case "$DISTRO" in
-      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel' | 'rocky')
         KUBE_ARCH="amd64"
         if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
             KUBE_ARCH="arm64"
@@ -174,7 +174,7 @@ fi
 if ! command_exists kubectx || ! command_exists kubens; then
     echo "kubectx or kubens not found. Installing..."
     case "$DISTRO" in
-      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel' | 'rocky')
         KUBECTX_VERSION="v0.9.5"
         KUBE_ARCH="x86_64"
         if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
@@ -219,7 +219,7 @@ if ! command_exists jq; then
       'ubuntu' | 'debian')
         sudo apt-get install -y jq
         ;;
-      'fedora' | 'centos' | 'rhel')
+      'fedora' | 'centos' | 'rhel' | 'rocky')
         sudo dnf install -y jq
         ;;
       'macOS')
@@ -234,7 +234,7 @@ fi
 if ! command_exists yq; then
     echo "yq not found. Installing..."
     case "$DISTRO" in
-      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel' | 'rocky')
         YQ_VERSION="v4.44.2"
         YQ_ARCH="amd64"
         if [ "$ARCH" == "arm64" ] || [ "$ARCH" == "aarch64" ]; then
@@ -265,6 +265,11 @@ if ! command_exists caddy; then
         curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
         sudo apt-get update
         sudo apt-get install -y caddy
+        ;;
+      'fedora' | 'centos' | 'rhel' | 'rocky')
+        sudo dnf install -y dnf-plugins-core
+        sudo dnf config-manager --add-repo https://dl.cloudsmith.io/public/caddy/stable/rpm.repo
+        sudo dnf install -y caddy
         ;;
       'macOS')
         brew install caddy

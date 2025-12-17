@@ -8,19 +8,24 @@
     - name: Check if git is installed
       ansible.builtin.shell: command -v git
       register: git_check
-      ignore_errors: true
+      failed_when: false
       changed_when: false
 
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: yes
-      when: ansible_os_family == "Debian" and git_check.failed
+      when: ansible_os_family == "Debian" and git_check.rc != 0
+
+    - name: Update dnf cache
+      ansible.builtin.dnf:
+        update_cache: yes
+      when: ansible_os_family == "RedHat" and git_check.rc != 0
 
     - name: Install git
       ansible.builtin.package:
         name: git
         state: present
-      when: git_check.failed
+      when: git_check.rc != 0
       register: git_install_result
 
     - name: Ensure zsh is installed
