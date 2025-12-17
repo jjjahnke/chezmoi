@@ -99,7 +99,7 @@ case "$DISTRO" in
     ;;
   'fedora' | 'centos' | 'rhel' | 'rocky')
     sudo dnf groupinstall -y "Development Tools"
-    sudo dnf install -y curl file git unzip zlib-devel bzip2-devel xz-devel openssl-devel sqlite-devel readline-devel ffi-devel ncurses-devel
+    sudo dnf install -y curl file git unzip zlib-devel bzip2-devel xz-devel openssl-devel sqlite-devel readline-devel libffi-devel ncurses-devel
     ;;
   'macOS')
     # On macOS, Xcode Command Line Tools are the equivalent.
