@@ -267,8 +267,8 @@ if ! command_exists caddy; then
         sudo apt-get install -y caddy
         ;;
       'fedora' | 'centos' | 'rhel' | 'rocky')
-        sudo dnf install -y dnf-plugins-core
-        sudo dnf config-manager --add-repo https://dl.cloudsmith.io/public/caddy/stable/rpm.repo
+        sudo dnf install -y 'dnf-command(copr)'
+        sudo dnf copr enable -y @caddy/caddy
         sudo dnf install -y caddy
         ;;
       'macOS')
