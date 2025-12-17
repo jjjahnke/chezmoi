@@ -410,8 +410,12 @@ fi
 if ! command_exists chezmoi; then
     echo "chezmoi not found. Installing..."
     case "$DISTRO" in
-      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel')
-        sudo snap install chezmoi --classic
+      'ubuntu' | 'debian' | 'fedora' | 'centos' | 'rhel' | 'rocky')
+        if command_exists snap; then
+          sudo snap install chezmoi --classic
+        else
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+        fi
         ;;
       'macOS')
         brew install chezmoi
