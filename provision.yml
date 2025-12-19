@@ -112,7 +112,7 @@
 
     - name: Initialize chezmoi from repository
       ansible.builtin.shell:
-        cmd: chezmoi init --apply jjjahnke/chezmoi
+        cmd: chezmoi init --purge --apply jjjahnke/chezmoi
       become: yes
       become_user: jahnke
       environment:
