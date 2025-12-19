@@ -44,16 +44,12 @@ fi
 
 echo "Updating ${VAULT_VARS_FILE}..."
 
-# This sed command replaces the multi-line vault_token block.
-sed -i.bak -e '/^vault_token: !vault |/,/^[[:space:]]*[^[:space:]]/ {
-    /^vault_token: !vault |/ {
-        r /dev/stdin
-        d
-    }
-    /^[[:space:]]*[^[:space:]]/!d
-}' "$VAULT_VARS_FILE" <<EOF
-$NEW_ENCRYPTED_BLOCK
-EOF
+# Export the new block so Perl can access it safely
+export NEW_ENCRYPTED_BLOCK
+
+# Use Perl to replace the multi-line vault_token block.
+# This matches 'vault_token:', the rest of that line, and all subsequent lines that start with whitespace.
+perl -i -0777 -pe 's/^vault_token:.*?(\n(?=\S)|\Z)/$ENV{NEW_ENCRYPTED_BLOCK}\n/ms' "$VAULT_VARS_FILE"
 
 # Remove the backup file created by sed
 rm -f "${VAULT_VARS_FILE}.bak"

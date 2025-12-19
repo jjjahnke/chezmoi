@@ -15,11 +15,29 @@ echo "Detected macOS. Installing packages with Homebrew..."
 brew install gh
 
 {{ else if eq .chezmoi.os "linux" -}}
-# Linux package installation (Debian/Ubuntu example)
-echo "Detected Linux. Installing packages with apt-get..."
-sudo apt-get update
-sudo apt-get install -y gh
+# Linux package installation
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    DISTRO=$ID
+else
+    DISTRO="unknown"
+fi
 
+case "$DISTRO" in
+    ubuntu|debian)
+        echo "Detected Debian/Ubuntu. Installing packages with apt-get..."
+        sudo apt-get update
+        sudo apt-get install -y gh
+        ;;
+    fedora|centos|rhel|rocky)
+        echo "Detected RHEL/Fedora/Rocky. Installing packages with dnf..."
+        sudo dnf install -y gh
+        ;;
+    *)
+        echo "Unsupported Linux distribution: $DISTRO"
+        echo "Skipping package installation."
+        ;;
+esac
 {{ end -}}
 
 echo "Package installation script finished."
