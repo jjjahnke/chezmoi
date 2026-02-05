@@ -76,6 +76,7 @@
         timeout: 5
       register: vault_status
       ignore_errors: true
+      tags: [vault_creds]
 
     - name: Get AppRole RoleID
       ansible.builtin.shell:
@@ -87,6 +88,7 @@
         VAULT_TOKEN: "{{ vault_token }}"
       register: role_id_result
       when: vault_status.status == 200
+      tags: [vault_creds]
 
     - name: Generate AppRole SecretID
       ansible.builtin.shell:
@@ -98,6 +100,7 @@
         VAULT_TOKEN: "{{ vault_token }}"
       register: secret_id_result
       when: vault_status.status == 200
+      tags: [vault_creds]
 
     - name: Store Vault AppRole credentials on the VM
       ansible.builtin.copy:
@@ -109,6 +112,7 @@
         group: jahnke
         mode: '0600'
       when: vault_status.status == 200
+      tags: [vault_creds]
 
     - name: Initialize chezmoi from repository
       ansible.builtin.shell:
