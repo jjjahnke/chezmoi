@@ -1,0 +1,21 @@
+server:
+  ha:
+    enabled: false
+
+  dataStorage:
+    enabled: true
+    size: 2Gi
+    storageClass: "local-path"
+    accessMode: ReadWriteOnce
+
+  # Pin to your specific node so the data stays found
+  nodeSelector:
+    kubernetes.io/hostname: "gpu-k3s-w-04"
+
+# This section controls the Service
+ui:
+  enabled: true
+  serviceType: LoadBalancer
+  serviceNodePort: null
+  externalPort: 8000      # <--- The magic setting. Opens port 8000 on the node.
+  targetPort: 8200
