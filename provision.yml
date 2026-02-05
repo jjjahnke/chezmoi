@@ -76,43 +76,6 @@
         timeout: 5
       register: vault_status
       ignore_errors: true
-      tags: [vault_creds]
-
-    - name: Get AppRole RoleID
-      ansible.builtin.shell:
-        cmd: vault read -format=json auth/approle/role/chezmoi-vm/role-id
-      become: yes
-      become_user: jahnke
-      environment:
-        VAULT_ADDR: "{{ vault_addr }}"
-        VAULT_TOKEN: "{{ vault_token }}"
-      register: role_id_result
-      when: vault_status.status == 200
-      tags: [vault_creds]
-
-    - name: Generate AppRole SecretID
-      ansible.builtin.shell:
-        cmd: vault write -f -format=json auth/approle/role/chezmoi-vm/secret-id
-      become: yes
-      become_user: jahnke
-      environment:
-        VAULT_ADDR: "{{ vault_addr }}"
-        VAULT_TOKEN: "{{ vault_token }}"
-      register: secret_id_result
-      when: vault_status.status == 200
-      tags: [vault_creds]
-
-    - name: Store Vault AppRole credentials on the VM
-      ansible.builtin.copy:
-        content: |
-          ROLE_ID="{{ (role_id_result.stdout | from_json).data.role_id }}"
-          SECRET_ID="{{ (secret_id_result.stdout | from_json).data.secret_id }}"
-        dest: "/home/jahnke/.vault-credentials"
-        owner: jahnke
-        group: jahnke
-        mode: '0600'
-      when: vault_status.status == 200
-      tags: [vault_creds]
 
     - name: Initialize chezmoi from repository
       ansible.builtin.shell:
@@ -123,4 +86,4 @@
         PATH: "/usr/local/bin:/home/jahnke/.local/bin:{{ ansible_facts['env'].PATH }}"
         VAULT_ADDR: "{{ vault_addr }}"
         VAULT_TOKEN: "{{ vault_token }}"
-      when: vault_status.status == 200
+      when: vault_status.status is defined and vault_status.status == 200
