@@ -178,6 +178,66 @@ You can now access the secret in any of your `chezmoi` templates.
 key = "{{ (vault "secret/personal/api-keys/new-service").data.data.value }}"
 ```
 
+## Vault Management
+
+This section covers maintenance tasks for the Vault server itself, such as rotating credentials or recovering from a complete server wipe.
+
+### Rotating Vault Credentials
+
+When the Vault Root Token changes (e.g., after a re-initialization or token rotation), the AppRole credentials (`~/.vault-credentials`) used by machines to log in must be updated.
+
+We have a dedicated script to handle this safely:
+
+1.  **Run the update script:**
+    ```bash
+    # You will be prompted to enter the NEW Vault Root Token.
+    ./scripts/update-vault-creds.sh
+    ```
+    This script will:
+    *   Verify the new token.
+    *   Generate a new `RoleID` and `SecretID` from Vault.
+    *   Update your local `~/.vault-credentials` file.
+    *   Add the updated file to `chezmoi`.
+
+2.  **Commit and Push:**
+    ```bash
+    chezmoi cd
+    git commit -m "chore: rotate vault credentials"
+    git push
+    ```
+
+3.  **Update Other Machines:**
+    On all other machines, simply run:
+    ```bash
+    chezmoi update
+    ```
+    They will pull the new credentials and regain access to Vault.
+
+### Restoring Vault After a Wipe
+
+If your Vault server is completely reset (e.g., storage wiped, re-initialized), you lose all secrets and configuration. You can restore everything from this repository using the new Root Token.
+
+1.  **Enable AppRole Auth:**
+    Run the setup script to re-enable the authentication method and recreate the `chezmoi-vm` role.
+    ```bash
+    export VAULT_TOKEN="<new-root-token>"
+    ./scripts/setup-vault-approle.sh
+    ```
+
+2.  **Restore Secrets:**
+    Run your repopulation script to write all your secrets (AWS keys, SSH keys, etc.) back into the Vault.
+    *   *Note: This requires you to have a populated `repopulate_vault.sh` file locally.*
+    ```bash
+    # Ensure the KV secrets engine is enabled first (if not already)
+    vault secrets enable -path=secret kv-v2
+    
+    # Restore secrets
+    ./repopulate_vault.sh
+    ```
+
+3.  **Rotate Credentials:**
+    Finally, follow the "Rotating Vault Credentials" steps above to generate new login IDs for your machines.
+
 ## Managing Kubernetes Configurations
 
 This setup uses a multi-file approach for Kubernetes configurations, where each cluster has its own config file. The `KUBECONFIG` environment variable is automatically managed to include all files from the `~/.kube/configs` directory.
