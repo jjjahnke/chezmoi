@@ -10,7 +10,7 @@ server:
 
   # Pin to your specific node so the data stays found
   nodeSelector:
-    kubernetes.io/hostname: "gpu-k3s-w-04"
+    kubernetes.io/hostname: "gpu-k3s-a-w-01.sopori.org"
 
 # This section controls the Service
 ui:
