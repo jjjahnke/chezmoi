@@ -180,7 +180,21 @@ key = "{{ (vault "secret/personal/api-keys/new-service").data.data.value }}"
 
 ## Vault Management
 
-This section covers maintenance tasks for the Vault server itself, such as rotating credentials or recovering from a complete server wipe.
+This section covers maintenance tasks for the Vault server itself, such as deployment, rotating credentials, or recovering from a complete server wipe.
+
+### Vault Server Deployment (Kubernetes)
+
+The Vault server is deployed to a Kubernetes cluster using the official HashiCorp Helm chart. The configuration for this deployment is stored in `vault-values.yml`.
+
+Key features of this configuration:
+*   **Persistent Storage:** Uses `local-path` storage on a 2Gi volume.
+*   **Node Pinning:** The pod is pinned to a specific node (`gpu-k3s-w-04`) to ensure data persistence on the local disk.
+*   **Network Access:** Exposed via a `LoadBalancer` service on **port 8000** (e.g., `http://vault.lan:8000`).
+
+To deploy or update the server:
+```bash
+helm upgrade --install vault hashicorp/vault -f vault-values.yml --namespace vault
+```
 
 ### Rotating Vault Credentials
 
