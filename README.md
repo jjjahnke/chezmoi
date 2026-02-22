@@ -252,6 +252,34 @@ If your Vault server is completely reset (e.g., storage wiped, re-initialized), 
 3.  **Rotate Credentials:**
     Finally, follow the "Rotating Vault Credentials" steps above to generate new login IDs for your machines.
 
+### Troubleshooting & Recovery
+
+If a machine is already in a "broken" state (showing login errors or 403s during apply), follow these steps to force an update:
+
+1.  **Pull the latest credentials:**
+    Since `chezmoi apply` might fail if it tries to render secrets, update just the credentials file first:
+    ```bash
+    # Update the local source repository
+    chezmoi git pull
+    
+    # Apply ONLY the credentials file to disk
+    chezmoi apply ~/.vault-credentials
+    ```
+
+2.  **Refresh your session:**
+    Update your current shell with the new credentials and log in to Vault:
+    ```bash
+    # This will trigger the automatic login with the NEW credentials
+    unset VAULT_TOKEN
+    source ~/.zprofile
+    ```
+
+3.  **Complete the apply:**
+    Now that you have a valid token, you can run a full apply:
+    ```bash
+    chezmoi apply
+    ```
+
 ## Managing Kubernetes Configurations
 
 This setup uses a multi-file approach for Kubernetes configurations, where each cluster has its own config file. The `KUBECONFIG` environment variable is automatically managed to include all files from the `~/.kube/configs` directory.
