@@ -20,7 +20,7 @@ AWS_ACCOUNT_ID="AWS_ACCOUNT_ID"           # Your 12-digit AWS Account ID
 
 set -e
 
-SECRET_PATH="secret/personal/aws/default"
+SECRET_PATH="secret/personal/aws/to"
 
 echo "--> Fetching existing secret from Vault..."
 

@@ -16,9 +16,9 @@ echo "--- Repopulating Vault Secrets ---"
 
 # --- AWS Credentials ---
 echo "Writing AWS credentials..."
-vault kv put secret/personal/aws/default AccessKeyID="REPLACE_WITH_DEFAULT_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_DEFAULT_AWS_SECRET_ACCESS_KEY" AccountID="REPLACE_WITH_DEFAULT_AWS_ACCOUNT_ID"
 vault kv put secret/personal/aws/rg AccessKeyID="REPLACE_WITH_RG_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_RG_AWS_SECRET_ACCESS_KEY" AccountID="REPLACE_WITH_RG_AWS_ACCOUNT_ID"
 vault kv put secret/personal/aws/to AccessKeyID="REPLACE_WITH_TO_AWS_ACCESS_KEY_ID" SecretAccessKey="REPLACE_WITH_TO_AWS_SECRET_ACCESS_KEY" AccountID="REPLACE_WITH_TO_AWS_ACCOUNT_ID"
+vault kv put secret/personal/aws/gp RoleARN="REPLACE_WITH_GP_ROLE_ARN"
 
 # --- Kubernetes Cluster Credentials ---
 echo "Writing Kubernetes credentials..."
@@ -78,9 +78,9 @@ vault policy write chezmoi-readonly - <<EOF
 # Allow reading all secrets required by chezmoi templates.
 # Note: Policies require the full API path, including '/data/'.
 
-path "secret/data/personal/aws/default" { capabilities = ["read"] }
 path "secret/data/personal/aws/rg" { capabilities = ["read"] }
 path "secret/data/personal/aws/to" { capabilities = ["read"] }
+path "secret/data/personal/aws/gp" { capabilities = ["read"] }
 path "secret/data/kube/personal/gpu-server" { capabilities = ["read"] }
 path "secret/data/personal/api-keys" { capabilities = ["read"] }
 path "secret/data/dev/api-keys" { capabilities = ["read"] }

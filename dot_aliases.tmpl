@@ -81,7 +81,7 @@ alias pyenv_bootstrap='_pyenv_bootstrap'
 
 
 # --- AWS ---
-alias aws-docker-login='aws ecr get-login-password | docker login --username AWS --password-stdin {{ (vault "secret/personal/aws/default").data.data.AccountID }}.dkr.ecr.us-east-2.amazonaws.com'
+alias aws-docker-login='aws ecr get-login-password | docker login --username AWS --password-stdin {{ (vault "secret/personal/aws/to").data.data.AccountID }}.dkr.ecr.us-east-2.amazonaws.com'
 
 
 # --- Kubernetes ---

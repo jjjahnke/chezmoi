@@ -10,6 +10,17 @@
 {{- end }}
 region = {{ .region }}
 output = {{ .output }}
+{{- if hasKey . "vaultSecretPath" }}
+{{-   $secret := vault (printf "secret/%s" .vaultSecretPath) }}
+{{-   if hasKey $secret.data.data "RoleARN" }}
+role_arn = {{ $secret.data.data.RoleARN }}
+{{-   end }}
+{{- else if hasKey . "role_arn" }}
+role_arn = {{ .role_arn }}
+{{- end }}
+{{- if hasKey . "source_profile" }}
+source_profile = {{ .source_profile }}
+{{- end }}
 
 {{ end -}}
 
