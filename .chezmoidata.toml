@@ -9,7 +9,7 @@
         name = "default"
         region = "us-east-2"
         output = "json"
-        source_profile = "to"
+        vaultSecretPath = "personal/aws/to"
       [data.aws.profiles.rg]
         name = "rg"
         region = "eu-west-2"
