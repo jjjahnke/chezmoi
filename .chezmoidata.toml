@@ -26,3 +26,9 @@
         output = "json"
         vaultSecretPath = "personal/aws/gp"
         source_profile = "to"
+      [data.aws.profiles.gp-dns]
+        name = "gp-dns"
+        region = "us-east-2"
+        output = "json"
+        source_profile = "gp"
+        role_arn = "arn:aws:iam::965611669223:role/GenPropDNSAccess"
