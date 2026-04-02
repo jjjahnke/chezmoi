@@ -19,6 +19,12 @@ provision.sh
 provision.yml
 repopulate_vault.sh
 
+# Ignore files with embedded credentials
+# TODO: Template .docker/config.json to pull Docker Hub creds from vault
+#       instead of storing base64-encoded password in plaintext.
+#       See: https://docs.docker.com/reference/cli/docker/login/#credential-stores
+.docker
+
 # Ignore entire directories
 /spec
 /scripts
