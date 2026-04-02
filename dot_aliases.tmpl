@@ -46,6 +46,9 @@ alias drol='OLLAMA_API_BASE="http://gpu-server:11434" aider --model ollama_chat/
 alias dlol='OLLAMA_API_BASE="http://localhost:11434" aider --model ollama_chat/devstral:24b'
 alias roll='OLLAMA_HOST=gpu-server:11434 ollama'
 
+# --- GenProp Tooling ---
+alias gp_ops='CLAUDE_AGENT_LABEL="ops" claude --cwd ~/TORMENTA/genprop/ops'
+
 _pyenv_bootstrap() {
   local PYTHON_VERSION=$1
 
