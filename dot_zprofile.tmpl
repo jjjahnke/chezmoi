@@ -21,6 +21,9 @@ eval "$(pyenv init -)"
 # --- User-local binaries ---
 export PATH="$HOME/.local/bin:$PATH"
 
+# --- Personal scripts (managed in chezmoi bin/) ---
+export PATH="$HOME/bin:$PATH"
+
 # --- Go lang configuration ---
 export PATH=$PATH:$HOME/.local/go/bin
 

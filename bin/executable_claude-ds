@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Claude Code backed by DeepSeek's Anthropic-compatible endpoint.
+# The cheap engine for unattended grunt loops; plain `claude` stays
+# 100% Anthropic. See the "Overnight Looping Runbook" vault note.
+set -euo pipefail
+if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
+  source "$HOME/.zprofile" 2>/dev/null || true   # cron has no login env
+fi
+: "${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY not set (expected via ~/.zprofile)}"
+export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+export ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY"
+export ANTHROPIC_MODEL="deepseek-v4-pro"
+export ANTHROPIC_SMALL_FAST_MODEL="deepseek-v4-flash"
+exec claude "$@"
