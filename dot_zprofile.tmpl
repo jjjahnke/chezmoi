@@ -40,9 +40,12 @@ fi
 
 {{ if or (not (hasKey . "machineType")) (ne .machineType "work") -}}
 # --- Personal Environment Variables ---
-# Lazily load the Gemini API key from Vault if a token is available.
+# Lazily load personal API keys from Vault if a token is available.
 if [ -n "$VAULT_TOKEN" ]; then
-  export GEMINI_API_KEY=$(vault kv get -format=json secret/personal/api-keys | jq -r .data.data.gemini_api_key)
+  _api_keys=$(vault kv get -format=json secret/personal/api-keys)
+  export GEMINI_API_KEY=$(echo "$_api_keys" | jq -r .data.data.gemini_api_key)
+  export DEEPSEEK_API_KEY=$(echo "$_api_keys" | jq -r .data.data.deepseek_api_key)
+  unset _api_keys
 fi
 {{- end }}
 

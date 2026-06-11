@@ -29,7 +29,7 @@ vault kv put secret/kube/personal/gpu-server \
 
 # --- API Keys ---
 echo "Writing API keys..."
-vault kv put secret/personal/api-keys gemini_api_key="REPLACE_WITH_GEMINI_API_KEY"
+vault kv put secret/personal/api-keys gemini_api_key="REPLACE_WITH_GEMINI_API_KEY" deepseek_api_key="REPLACE_WITH_DEEPSEEK_API_KEY"
 vault kv put secret/dev/api-keys github_token="REPLACE_WITH_GITHUB_TOKEN"
 
 # --- Docker Credentials ---
