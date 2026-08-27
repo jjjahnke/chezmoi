@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Show running overnight loops and tail their logs.
+#   loops              list active nightly-loop.sh / loop-train.sh processes
+#   loops tail [N|name]  tail -f the log of loop N (default 1) or matching name
+#   loops logs         list today's logs newest first (even if the loop ended)
+set -euo pipefail
+LOGDIR="$HOME/loop-logs"
+
+# Each line: pid<TAB>start<TAB>kind<TAB>name<TAB>logfile
+_active() {
+  ps -axo pid=,lstart=,command= | grep -E '(nightly-loop|loop-train)\.sh ' | grep -v grep |
+  while read -r pid wd m d t y rest; do
+    # rest = "... /path/nightly-loop.sh <repo> <order> ..." (bash may prefix it)
+    set -- $rest
+    while [ $# -gt 0 ] && [[ "$1" != *loop*.sh ]]; do shift; done
+    script=$(basename "${1:-?}"); repo="${2:-?}"
+    case "$script" in
+      nightly-loop.sh) name=$(basename "${3:-?}" .md); kind=loop ;;
+      loop-train.sh)   name="${3:-?}"; kind=train ;;
+      *) continue ;;
+    esac
+    # Match the newest log for this order (train logs live under its orders).
+    log=$(ls -t "$LOGDIR"/*-"$name".log 2>/dev/null | head -1 || true)
+    [ "$kind" = train ] && log=$(ls -t "$LOGDIR"/*.log 2>/dev/null | head -1 || true)
+    printf '%s\t%s %s %s\t%s\t%s\t%s\t%s\n' "$pid" "$m" "$d" "$t" "$kind" "$name" "$(basename "$repo")" "${log:-}"
+  done | sort -t$'\t' -k3,4 -u -s   # one row per kind+name (tee/subshell forks share the cmdline)
+}
+
+_list() {
+  local n=0
+  while IFS=$'\t' read -r pid start kind name repo log; do
+    n=$((n+1))
+    [ $n -eq 1 ] && printf '%-3s %-7s %-6s %-28s %-18s %s\n' '#' PID KIND NAME REPO 'LAST LINE'
+    last=""
+    if [ -n "$log" ]; then
+      last=$(grep -E '^=== ' "$log" 2>/dev/null | tail -1 || true)
+      [ -z "$last" ] && last=$(tail -1 "$log" 2>/dev/null | cut -c1-60 || true)
+    fi
+    printf '%-3s %-7s %-6s %-28s %-18s %s\n' "$n" "$pid" "$kind" "$name" "$repo" "$last"
+    printf '    since %s  log %s\n' "$start" "${log:-(none yet)}"
+  done < <(_active)
+  [ $n -eq 0 ] && echo "no active loops"
+  return 0
+}
+
+_tail() {
+  local sel="${1:-1}" log=""
+  if [[ "$sel" =~ ^[0-9]+$ ]]; then
+    log=$(_active | sed -n "${sel}p" | cut -f6)
+  else
+    log=$(_active | grep -i -- "$sel" | head -1 | cut -f6)
+    [ -z "$log" ] && log=$(ls -t "$LOGDIR"/*"$sel"*.log 2>/dev/null | head -1 || true)
+  fi
+  [ -n "$log" ] || { echo "no log found for '$sel'" >&2; _list; exit 1; }
+  echo ">>> tail -f $log  (ctrl-c to stop)"
+  exec tail -n 40 -f "$log"
+}
+
+case "${1:-list}" in
+  list|ls) _list ;;
+  tail|t)  shift; _tail "$@" ;;
+  logs)    ls -lt "$LOGDIR"/*.log 2>/dev/null | head -20 || echo "no logs in $LOGDIR" ;;
+  *) sed -n '2,5p' "$0"; exit 1 ;;
+esac
