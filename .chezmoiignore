@@ -26,7 +26,7 @@ repopulate_vault.sh
 .docker
 
 # Ignore entire directories
-/spec
-/scripts
-/copilot-proxy
-/docs
+spec
+scripts
+copilot-proxy
+docs
