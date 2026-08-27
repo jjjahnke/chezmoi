@@ -11,4 +11,7 @@ export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 export ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY"
 export ANTHROPIC_MODEL="deepseek-v4-pro"
 export ANTHROPIC_SMALL_FAST_MODEL="deepseek-v4-flash"
+# DeepSeek V4 has a 1M context window; Claude Code assumes 200k for
+# unrecognized models and would auto-compact far too early otherwise.
+export CLAUDE_CODE_MAX_CONTEXT_TOKENS=1000000
 exec claude "$@"
