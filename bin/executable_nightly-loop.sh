@@ -8,7 +8,7 @@
 # Env knobs (for the train runner):
 #   LOOP_BASE   - ref to branch from (default origin/main)
 #   LOOP_NO_PR  - if set, skip push/PR (the caller integrates the branch)
-#   LOOP_ENGINE - the claude CLI that grinds the loop (default claude-ds = DeepSeek).
+#   LOOP_ENGINE - the claude CLI that grinds the loop (default claude-ds = DeepSeek; claude-kimi = Kimi K2.7).
 #                 Set LOOP_ENGINE=claude to run on frontier Claude instead.
 # Usage: nightly-loop.sh <repo-path> <work-order-file> [max-iterations]
 set -euo pipefail
