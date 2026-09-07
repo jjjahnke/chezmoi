@@ -280,6 +280,16 @@ If a machine is already in a "broken" state (showing login errors or 403s during
     chezmoi apply
     ```
 
+### Operating chezmoi from an agent (Claude Code)
+
+Three things learned the hard way on 2026-08-30, when a single chained command overwrote a locally newer `~/bin/nightly-loop.sh`:
+
+- **`chezmoi apply` needs a TTY whenever any target differs** (`could not open a new TTY: open /dev/tty: device not configured`). From a non-interactive shell only `--force` or a clean tree gets through. So always run `chezmoi diff` on its own first, read it, and only then decide.
+- **Never chain `diff` and `apply --force` in one command.** If the diff shows a target on disk is *newer* than the source (a `~/bin` script edited in place, for example), the right move is `chezmoi add <path>` to pull it into the repo, not `--force`, which throws the edit away.
+- **`.chezmoiignore` entries must not start with `/`.** `/spec`, `/scripts`, `/docs` are rejected (`.chezmoiignore:29: /spec: invalid path`) and the whole `apply` fails, silently if nobody is watching. Write `spec`, `scripts`, `docs`. This had been failing every apply for weeks before anyone noticed.
+
+Also: an expired Vault token 403s mid-render on `dot_aliases.tmpl`; from an agent, hand the user `! vault login` and follow the recovery steps above.
+
 ## Managing Kubernetes Configurations
 
 This setup uses a multi-file approach for Kubernetes configurations, where each cluster has its own config file. The `KUBECONFIG` environment variable is automatically managed to include all files from the `~/.kube/configs` directory.
