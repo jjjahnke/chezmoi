@@ -49,6 +49,7 @@ if [ -n "$VAULT_TOKEN" ]; then
   export GEMINI_API_KEY=$(echo "$_api_keys" | jq -r .data.data.gemini_api_key)
   export DEEPSEEK_API_KEY=$(echo "$_api_keys" | jq -r .data.data.deepseek_api_key)
   export KIMI_API_KEY=$(echo "$_api_keys" | jq -r .data.data.kimi_api_key)
+  export CLICKUP_API_TOKEN=$(echo "$_api_keys" | jq -r .data.data.clickup_api_token)   # gauge + genprop ship.sh, added 2026-09-07
   unset _api_keys
 fi
 {{- end }}
