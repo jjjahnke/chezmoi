@@ -8,6 +8,14 @@ Host github.com
   IdentityFile ~/.ssh/chezmoi_automation_id_ed25519
   IdentitiesOnly yes
 
+# --- Homelab ---
+# NVIDIA DGX Spark (spark-5e8d) on the LAN.
+Host spark
+  HostName 192.168.35.224
+  User jahnke
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+
 {{ if eq .chezmoi.os "darwin" -}}
 # --- macOS Specific Configuration ---
 # Store SSH key passphrases in the macOS Keychain.
