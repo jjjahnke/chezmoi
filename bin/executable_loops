@@ -8,7 +8,7 @@ LOGDIR="$HOME/loop-logs"
 
 # Each line: pid<TAB>start<TAB>kind<TAB>name<TAB>logfile
 _active() {
-  ps -axo pid=,lstart=,command= | grep -E '(nightly-loop|loop-train)\.sh ' | grep -v grep |
+  ps -axo pid=,lstart=,command= | grep -E '(nightly-loop|loop-train|scripts/loop)\.sh ' | grep -v grep |
   while read -r pid wd m d t y rest; do
     # rest = "... /path/nightly-loop.sh <repo> <order> ..." (bash may prefix it)
     set -- $rest
@@ -17,6 +17,7 @@ _active() {
     case "$script" in
       nightly-loop.sh) name=$(basename "${3:-?}" .md); kind=loop ;;
       loop-train.sh)   name="${3:-?}"; kind=train ;;
+      loop.sh)         name=$(basename "${2:-?}" .md); kind=loop; repo=$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -1) ;;
       *) continue ;;
     esac
     # Match the newest log for this order (train logs live under its orders).
