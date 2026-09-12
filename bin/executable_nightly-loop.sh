@@ -36,7 +36,39 @@ done
 rm -f LOOP_STATUS.md LOOP_MSG.md
 
 GATE_OUT=$(mktemp); trap 'rm -f "$GATE_OUT"' EXIT
-gate() { make validate >"$GATE_OUT" 2>&1; }
+
+# The gate is bounded and timed. Bounded because it runs on the remote builder
+# over an ssh tunnel: on 2026-09-12 the docs2data container finished, the tunnel
+# died, and the docker client waited 4.5 hours for an answer that was never
+# coming, with nothing in the log to say so. Timed because nothing recorded how
+# long a gate takes, so the timeout had to be measured after the fact.
+#
+# Sizing: a warm docs2data gate (image build + ruff + mypy + 205 tests) is 33s.
+# The slowest known real gate was about 25 minutes, an OCR test rendering a huge
+# synthetic page. Commit-to-commit intervals across past loop branches, which
+# include the agent's turn as well as the gate, run a median of 31 minutes and a
+# max of 70. An hour is therefore far above any gate that is actually working,
+# and fires only when the gate has stopped being a gate. Override with
+# LOOP_GATE_TIMEOUT.
+GATE_TIMEOUT="${LOOP_GATE_TIMEOUT:-3600}"
+TIMEOUT_BIN="$(command -v timeout || command -v gtimeout || true)"
+gate() {
+  local start rc secs
+  start=$(date +%s)
+  if [ -n "$TIMEOUT_BIN" ]; then
+    "$TIMEOUT_BIN" --kill-after=60 "$GATE_TIMEOUT" make validate >"$GATE_OUT" 2>&1; rc=$?
+  else
+    make validate >"$GATE_OUT" 2>&1; rc=$?
+  fi
+  secs=$(( $(date +%s) - start ))
+  echo "=== gate: ${secs}s, exit ${rc} ($(date '+%Y-%m-%d %H:%M:%S')) ==="
+  if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+    echo "The gate did not finish within ${GATE_TIMEOUT}s and was killed. That is
+usually the builder connection hanging rather than a real test failure: check
+'docker --context builder ps' before assuming the code is at fault." >>"$GATE_OUT"
+  fi
+  return "$rc"
+}
 
 # Green gate from iteration 0: the loop inherits a working baseline or
 # does not run at all.

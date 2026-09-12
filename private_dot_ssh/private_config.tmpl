@@ -9,6 +9,15 @@ Host github.com
   IdentitiesOnly yes
 
 # --- Homelab ---
+# amd64 build box (LXC 100 on pve-04), the docker context named `builder`.
+# Keepalives because the loop harness runs `make validate` through this tunnel:
+# without them a dropped connection leaves the docker client waiting forever
+# instead of failing (cost 4.5 hours of a stalled loop on 2026-09-12).
+Host 192.168.35.124 docker-builder
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  TCPKeepAlive yes
+
 # NVIDIA DGX Spark (spark-5e8d) on the LAN.
 Host spark
   HostName 192.168.35.224
