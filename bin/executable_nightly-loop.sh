@@ -28,7 +28,13 @@ exec > >(tee -a "$LOGDIR/$(date +%Y%m%d)-$(basename "$ORDER" .md).log") 2>&1
 cd "$REPO"
 git fetch origin
 BRANCH="loop/$(date +%Y%m%d)-$(basename "$ORDER" .md)"
-git checkout -B "$BRANCH" "$BASE"
+# Pin the starting point as a SHA before moving any refs. Resuming a run with
+# LOOP_BASE set to the loop branch itself makes BASE and BRANCH the same ref, so
+# checkout -B drags BASE along with HEAD and the end-of-run "did we produce
+# commits" test compares the branch against itself and always says no. That ate
+# the push and PR of a completed run on 2026-09-12.
+BASE_SHA=$(git rev-parse --verify "$BASE")
+git checkout -B "$BRANCH" "$BASE_SHA"
 # Status/summary files are loop plumbing, never part of the deliverable.
 for f in LOOP_STATUS.md LOOP_MSG.md; do
   grep -qxF "$f" .git/info/exclude 2>/dev/null || echo "$f" >> .git/info/exclude
@@ -134,7 +140,7 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 if [ -z "${LOOP_NO_PR:-}" ]; then
-  if [ "$(git rev-list --count "$BASE"..HEAD)" -gt 0 ]; then
+  if [ "$(git rev-list --count "$BASE_SHA"..HEAD)" -gt 0 ]; then
     git push -u origin "$BRANCH"
     gh pr create --fill --draft || true
   else
