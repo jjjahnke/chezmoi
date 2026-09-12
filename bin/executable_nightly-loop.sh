@@ -35,6 +35,17 @@ BRANCH="loop/$(date +%Y%m%d)-$(basename "$ORDER" .md)"
 # the push and PR of a completed run on 2026-09-12.
 BASE_SHA=$(git rev-parse --verify "$BASE")
 git checkout -B "$BRANCH" "$BASE_SHA"
+
+# The order has to exist in the tree the agent is about to work in. Push an order
+# to main, point LOOP_BASE at a branch created before it, and the agent has
+# nothing to read: on 2026-09-12 one inferred the job from repo state, saw a green
+# gate, wrote STATUS: DONE and burned a run. Refuse instead of improvising.
+if [ ! -f "$ORDER" ]; then
+  echo "=== work order '$ORDER' does not exist on base $BASE ($BASE_SHA)."
+  echo "=== Put the order on that base (cherry-pick it, or branch from one that has it) and rerun."
+  exit 1
+fi
+
 # Status/summary files are loop plumbing, never part of the deliverable.
 for f in LOOP_STATUS.md LOOP_MSG.md; do
   grep -qxF "$f" .git/info/exclude 2>/dev/null || echo "$f" >> .git/info/exclude
