@@ -9,8 +9,12 @@ fi
 : "${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY not set (expected via ~/.zprofile)}"
 export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 export ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY"
-export ANTHROPIC_MODEL="deepseek-v4-pro"
-export ANTHROPIC_SMALL_FAST_MODEL="deepseek-v4-flash"
+# v4-pro is retired 2026-09-14: from then, requests to it are ROUTED to V4.1 Flash
+# and billed at Flash prices, silently. Name the model we actually want
+# rather than be redirected. See genprop decisions/
+# fix-deepseek-v4-pro-retirement.md.
+export ANTHROPIC_MODEL="${DEEPSEEK_MODEL:-deepseek-flash}"
+export ANTHROPIC_SMALL_FAST_MODEL="deepseek-flash"
 # DeepSeek V4 has a 1M context window; Claude Code assumes 200k for
 # unrecognized models and would auto-compact far too early otherwise.
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS=1000000

@@ -4,12 +4,15 @@
 # for the council; plain `claude` stays 100% Anthropic. Same shape as
 # claude-ds. See the "Overnight Looping Runbook" vault note.
 set -euo pipefail
-if [ -z "${KIMI_API_KEY:-}" ]; then
+# The key is vendor-named (MOONSHOT_API_KEY) per the genprop key standard.
+# The COMMAND stays claude-kimi: that is the product you invoke, and the
+# council's engines.json and seat.sh both reference this name.
+if [ -z "${MOONSHOT_API_KEY:-}" ]; then
   source "$HOME/.zprofile" 2>/dev/null || true   # cron has no login env
 fi
-: "${KIMI_API_KEY:?KIMI_API_KEY not set (expected via ~/.zprofile)}"
+: "${MOONSHOT_API_KEY:?MOONSHOT_API_KEY not set (expected via ~/.zprofile)}"
 export ANTHROPIC_BASE_URL="https://api.moonshot.ai/anthropic"
-export ANTHROPIC_AUTH_TOKEN="$KIMI_API_KEY"
+export ANTHROPIC_AUTH_TOKEN="$MOONSHOT_API_KEY"
 # Models available on this account (2026-09-06): kimi-k2.6, kimi-k2.7-code,
 # kimi-k2.7-code-highspeed, kimi-k3. Override with KIMI_MODEL / KIMI_FAST_MODEL.
 export ANTHROPIC_MODEL="${KIMI_MODEL:-kimi-k2.7-code}"

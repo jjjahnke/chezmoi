@@ -29,7 +29,15 @@ vault kv put secret/kube/personal/gpu-server \
 
 # --- API Keys ---
 echo "Writing API keys..."
-vault kv put secret/personal/api-keys gemini_api_key="REPLACE_WITH_GEMINI_API_KEY" deepseek_api_key="REPLACE_WITH_DEEPSEEK_API_KEY"
+# NOTE: `vault kv put` REPLACES the whole entry. Every field this secret
+# holds must be listed here or running this script silently drops it.
+# It previously listed only gemini and deepseek, so it would have
+# destroyed kimi_api_key and clickup_api_token (caught 2026-09-10).
+vault kv put secret/personal/api-keys \
+  gemini_api_key="REPLACE_WITH_GEMINI_API_KEY" \
+  deepseek_api_key="REPLACE_WITH_DEEPSEEK_API_KEY" \
+  moonshot_api_key="REPLACE_WITH_MOONSHOT_API_KEY" \
+  clickup_api_token="REPLACE_WITH_CLICKUP_API_TOKEN"
 vault kv put secret/dev/api-keys github_token="REPLACE_WITH_GITHUB_TOKEN"
 
 # --- Docker Credentials ---

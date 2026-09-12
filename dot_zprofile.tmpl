@@ -1,3 +1,14 @@
+# The following lines were added by Docker Desktop to add commands to your PATH.
+export PATH="$PATH:{{ .chezmoi.homeDir }}/.docker/bin"
+# End of Docker Desktop section.
+#
+# chezmoi owns this block as of 2026-09-10. Docker Desktop appends it to
+# ~/.zprofile directly and matches on the marker comments above, so keeping
+# them verbatim means Docker finds its section and does not duplicate it.
+# Without this, every `chezmoi apply` reverted the block and took
+# docker-compose and the credential helpers out of PATH until Docker
+# re-added it.
+
 # ------------------------------------------------------------------------------
 # Zsh Profile - Managed by chezmoi
 # ------------------------------------------------------------------------------
@@ -48,7 +59,9 @@ if [ -n "$VAULT_TOKEN" ]; then
   _api_keys=$(vault kv get -format=json secret/personal/api-keys)
   export GEMINI_API_KEY=$(echo "$_api_keys" | jq -r .data.data.gemini_api_key)
   export DEEPSEEK_API_KEY=$(echo "$_api_keys" | jq -r .data.data.deepseek_api_key)
-  export KIMI_API_KEY=$(echo "$_api_keys" | jq -r .data.data.kimi_api_key)
+  # Vendor-named per decisions/feature-llm-key-standard.md in genprop:
+  # Moonshot is the vendor, Kimi the product.
+  export MOONSHOT_API_KEY=$(echo "$_api_keys" | jq -r .data.data.moonshot_api_key)
   export CLICKUP_API_TOKEN=$(echo "$_api_keys" | jq -r .data.data.clickup_api_token)   # gauge + genprop ship.sh, added 2026-09-07
   unset _api_keys
 fi
