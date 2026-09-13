@@ -110,6 +110,13 @@ keep_transcript() {
 # harness decides exhausted/error/cancelled. TOKENS is the running total across
 # every turn of this run.
 TOKENS=0; CACHE_READS=0; SID=""
+# 10216906 is unreadable at a glance; 10,216,906 is not. Pure bash, so the commas
+# do not depend on a locale that cron and launchd may not set.
+commas() {
+  local s="$1" out=""
+  while [ ${#s} -gt 3 ]; do out=",${s: -3}$out"; s="${s:0:${#s}-3}"; done
+  echo "$s$out"
+}
 finish() {
   local state="$1" why="${2:-}" rc
   case "$state" in
@@ -123,7 +130,7 @@ finish() {
   fi
   # Again here, so a run cancelled or failed mid-turn keeps what that turn did.
   keep_transcript "$SID"
-  echo "=== LOOP_RESULT: $state (tokens ${TOKENS}/${MAX_TOKENS}, cache reads ${CACHE_READS} not counted, session ${SID:-none}, transcripts $RUN_DIR) $why ==="
+  echo "=== LOOP_RESULT: $state (tokens $(commas "$TOKENS")/$(commas "$MAX_TOKENS"), cache reads $(commas "$CACHE_READS") not counted, session ${SID:-none}, transcripts $RUN_DIR) $why ==="
   if [ -n "$(git status --porcelain)" ]; then
     echo "=== WARNING: uncommitted changes remain (gate red at loop end); left in working tree ==="
   fi
@@ -132,7 +139,7 @@ finish() {
       git push -u origin "$BRANCH"
       gh pr create --draft --title "loop: $(basename "$ORDER" .md) [$state]" \
         --body "$(printf 'Work order: %s\nResult: **%s** %s\nTokens: %s\n\n%s\n' \
-          "$ORDER" "$state" "$why" "$TOKENS" "$(cat LOOP_STATUS.md 2>/dev/null)")" || true
+          "$ORDER" "$state" "$why" "$(commas "$TOKENS")" "$(cat LOOP_STATUS.md 2>/dev/null)")" || true
     else
       echo "=== no commits produced; skipping push/PR ==="
     fi
@@ -213,7 +220,8 @@ u = d.get("usage") or {}
 used = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "output_tokens"))
 cache_reads = int(u.get("cache_read_input_tokens") or 0)
 print(d.get("result") or "")
-print(f"=== turn: {used} tokens counted (in {u.get('input_tokens',0)}, cache writes {u.get('cache_creation_input_tokens',0)}, out {u.get('output_tokens',0)}; cache reads {cache_reads} not counted), {d.get('num_turns',0)} model turns, error={d.get('is_error')}, session {d.get('session_id') or 'unknown'} ===", flush=True)
+n = lambda k: f"{int(u.get(k) or 0):,}"
+print(f"=== turn: {used:,} tokens counted (in {n('input_tokens')}, cache writes {n('cache_creation_input_tokens')}, out {n('output_tokens')}; cache reads {cache_reads:,} not counted), {d.get('num_turns',0)} model turns, error={d.get('is_error')}, session {d.get('session_id') or 'unknown'} ===", flush=True)
 open(sys.argv[1] + ".tokens", "w").write(f"{used} {cache_reads}")
 sys.exit(1 if d.get("is_error") else 0)
 PY
@@ -243,7 +251,7 @@ LOOP_STATUS.md."
 
 RESUME_CTX=""
 for i in $(seq 1 "$ITERS"); do
-  echo "=== loop iteration $i/$ITERS (tokens so far ${TOKENS}/${MAX_TOKENS}) ==="
+  echo "=== loop iteration $i/$ITERS (tokens so far $(commas "$TOKENS")/$(commas "$MAX_TOKENS")) ==="
   if [ -n "$RESUME_CTX" ]; then
     if turn --resume "$SID" "$RESUME_CTX"; then ENGINE_FAILS=0; else ENGINE_FAILS=$((ENGINE_FAILS + 1)); fi
   else
