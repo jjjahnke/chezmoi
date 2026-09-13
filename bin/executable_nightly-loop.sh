@@ -23,6 +23,11 @@
 #                       Set LOOP_ENGINE=claude to run on frontier Claude instead.
 #   LOOP_MAX_TOKENS   - per-run token ceiling across all turns (default 5000000)
 #   LOOP_GATE_TIMEOUT - seconds before a gate is killed (default 3600)
+#
+# The record of a run: ~/loop-logs/<date>-<order>.log holds each turn's last
+# message, its tokens and session id, and every gate verdict. The work itself
+# (every read, edit, test run and dead end) is the session transcript, copied
+# after each turn to ~/loop-logs/<date>-<order>/<session>.jsonl.
 # Usage: nightly-loop.sh <repo-path> <work-order-file> [max-iterations]
 set -euo pipefail
 REPO="${1:?usage: nightly-loop.sh <repo> <work-order> [iters]}"
@@ -37,7 +42,10 @@ MAX_TOKENS="${LOOP_MAX_TOKENS:-5000000}"
 ALLOWED="Edit,Write,Read,Glob,Grep,Bash(make validate),Bash(make test*),Bash(make lint*),Bash(git status*),Bash(git diff*),Bash(git log*)"
 
 LOGDIR="$HOME/loop-logs"; mkdir -p "$LOGDIR"
-exec > >(tee -a "$LOGDIR/$(date +%Y%m%d)-$(basename "$ORDER" .md).log") 2>&1
+# Named once, so a run that crosses midnight keeps one log and one transcript dir.
+RUN_NAME="$(date +%Y%m%d)-$(basename "$ORDER" .md)"
+RUN_DIR="$LOGDIR/$RUN_NAME"
+exec > >(tee -a "$LOGDIR/$RUN_NAME.log") 2>&1
 
 cd "$REPO"
 git fetch origin
@@ -68,6 +76,34 @@ rm -f LOOP_STATUS.md LOOP_MSG.md
 
 GATE_OUT=$(mktemp); TURN_OUT=$(mktemp); trap 'rm -f "$GATE_OUT" "$TURN_OUT" "$TURN_OUT.tokens"' EXIT
 
+# ---- the record ------------------------------------------------------------
+# The log is not the work. A turn's reads, edits, test runs and dead ends live only
+# in its session transcript, which Claude Code deletes after 30 days
+# (cleanupPeriodDays) and which the weekly transcript review deliberately skips for
+# loops. On 2026-09-13 the docs2data-loop project dir held 58 transcripts, the oldest
+# from Sep 8, for a project that had been looping since June: everything earlier was
+# gone. So each turn's transcript is copied beside the log, under the run's name,
+# where nothing cleans it up. A copy that fails is a line in the log, never a failed
+# run: bookkeeping must not break the loop.
+TRANSCRIPTS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
+keep_transcript() {
+  local sid="$1" src
+  [ -n "$sid" ] || return 0
+  src=$(find "$TRANSCRIPTS" -mindepth 2 -maxdepth 2 -name "$sid.jsonl" -print 2>/dev/null | head -1 || true)
+  if [ -z "$src" ]; then
+    echo "=== transcript: none found for session $sid under $TRANSCRIPTS ==="
+    return 0
+  fi
+  if mkdir -p "$RUN_DIR" && cp "$src" "$RUN_DIR/$sid.jsonl"; then
+    # Subagent transcripts, when the engine spawned any, sit in a dir named for the session.
+    if [ -d "${src%.jsonl}" ]; then cp -R "${src%.jsonl}" "$RUN_DIR/" 2>/dev/null || true; fi
+    echo "=== transcript: $RUN_DIR/$sid.jsonl ==="
+  else
+    echo "=== transcript: could not copy $src ==="
+  fi
+  return 0
+}
+
 # ---- terminal states -------------------------------------------------------
 # One exit path. The agent's own STATUS line decides done/blocked/decide; the
 # harness decides exhausted/error/cancelled. TOKENS is the running total across
@@ -84,7 +120,9 @@ finish() {
   if [ ! -s LOOP_STATUS.md ]; then
     printf 'STATUS: %s\n%s\n' "$(echo "$state" | tr 'a-z' 'A-Z')" "$why" > LOOP_STATUS.md
   fi
-  echo "=== LOOP_RESULT: $state (tokens ${TOKENS}/${MAX_TOKENS}, session ${SID:-none}) $why ==="
+  # Again here, so a run cancelled or failed mid-turn keeps what that turn did.
+  keep_transcript "$SID"
+  echo "=== LOOP_RESULT: $state (tokens ${TOKENS}/${MAX_TOKENS}, session ${SID:-none}, transcripts $RUN_DIR) $why ==="
   if [ -n "$(git status --porcelain)" ]; then
     echo "=== WARNING: uncommitted changes remain (gate red at loop end); left in working tree ==="
   fi
@@ -165,7 +203,7 @@ except Exception as e:
 u = d.get("usage") or {}
 used = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens"))
 print(d.get("result") or "")
-print(f"=== turn: {used} tokens (in {u.get('input_tokens',0)}, cache {u.get('cache_read_input_tokens',0)}, out {u.get('output_tokens',0)}), {d.get('num_turns',0)} model turns, error={d.get('is_error')} ===", flush=True)
+print(f"=== turn: {used} tokens (in {u.get('input_tokens',0)}, cache {u.get('cache_read_input_tokens',0)}, out {u.get('output_tokens',0)}), {d.get('num_turns',0)} model turns, error={d.get('is_error')}, session {d.get('session_id') or 'unknown'} ===", flush=True)
 open(sys.argv[1] + ".tokens", "w").write(str(used))
 sys.exit(1 if d.get("is_error") else 0)
 PY
@@ -201,6 +239,7 @@ for i in $(seq 1 "$ITERS"); do
     if turn --session-id "$SID" "$BUILD_PROMPT"; then ENGINE_FAILS=0; else ENGINE_FAILS=$((ENGINE_FAILS + 1)); fi
   fi
   add_tokens
+  keep_transcript "$SID"
   # One engine failure may be transient (rate limit, tunnel); two in a row is
   # the run's problem, not the code's.
   if [ "$ENGINE_FAILS" -ge 2 ]; then
