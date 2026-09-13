@@ -21,7 +21,8 @@
 #   LOOP_NO_PR        - if set, skip push/PR (the caller integrates the branch)
 #   LOOP_ENGINE       - the claude CLI that grinds the loop (default claude-ds = DeepSeek; claude-kimi = Kimi K2.7).
 #                       Set LOOP_ENGINE=claude to run on frontier Claude instead.
-#   LOOP_MAX_TOKENS   - per-run token ceiling across all turns (default 5000000)
+#   LOOP_MAX_TOKENS   - per-run token ceiling across all turns (default 5000000), counting
+#                       input, cache writes and output. Cache READS are reported, not counted.
 #   LOOP_GATE_TIMEOUT - seconds before a gate is killed (default 3600)
 #
 # The record of a run: ~/loop-logs/<date>-<order>.log holds each turn's last
@@ -108,7 +109,7 @@ keep_transcript() {
 # One exit path. The agent's own STATUS line decides done/blocked/decide; the
 # harness decides exhausted/error/cancelled. TOKENS is the running total across
 # every turn of this run.
-TOKENS=0; SID=""
+TOKENS=0; CACHE_READS=0; SID=""
 finish() {
   local state="$1" why="${2:-}" rc
   case "$state" in
@@ -122,7 +123,7 @@ finish() {
   fi
   # Again here, so a run cancelled or failed mid-turn keeps what that turn did.
   keep_transcript "$SID"
-  echo "=== LOOP_RESULT: $state (tokens ${TOKENS}/${MAX_TOKENS}, session ${SID:-none}, transcripts $RUN_DIR) $why ==="
+  echo "=== LOOP_RESULT: $state (tokens ${TOKENS}/${MAX_TOKENS}, cache reads ${CACHE_READS} not counted, session ${SID:-none}, transcripts $RUN_DIR) $why ==="
   if [ -n "$(git status --porcelain)" ]; then
     echo "=== WARNING: uncommitted changes remain (gate red at loop end); left in working tree ==="
   fi
@@ -189,6 +190,14 @@ fi
 # reported cost is NOT trusted: Claude Code prices non-Anthropic models at
 # Anthropic rates (a 43k-token DeepSeek turn showed $0.22 on 2026-09-13), so the
 # ceiling is in tokens, which the endpoint reports correctly.
+#
+# The ceiling counts input, cache writes and output, and NOT cache reads. Every
+# step of a turn re-reads the cached context, so cache reads grow with the number
+# of steps rather than with the work, and the endpoint bills them at a fraction of
+# the price. Counted, they ended the first real run of this ceiling after one
+# green iteration (D.5, 2026-09-13): 10,216,906 tokens against 5,000,000, of which
+# 9,999,232 were cache reads and 217,674 the rest. Cache reads are still printed
+# per turn and totalled at the end, so a run that thrashes its context is visible.
 ENGINE_FAILS=0
 turn() {
   # $@ = engine args after -p. Returns 0 on a usable turn, 1 on engine failure.
@@ -201,16 +210,19 @@ try:
 except Exception as e:
     print(f"=== engine: no JSON result ({e}) ===", flush=True); sys.exit(1)
 u = d.get("usage") or {}
-used = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens"))
+used = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "output_tokens"))
+cache_reads = int(u.get("cache_read_input_tokens") or 0)
 print(d.get("result") or "")
-print(f"=== turn: {used} tokens (in {u.get('input_tokens',0)}, cache {u.get('cache_read_input_tokens',0)}, out {u.get('output_tokens',0)}), {d.get('num_turns',0)} model turns, error={d.get('is_error')}, session {d.get('session_id') or 'unknown'} ===", flush=True)
-open(sys.argv[1] + ".tokens", "w").write(str(used))
+print(f"=== turn: {used} tokens counted (in {u.get('input_tokens',0)}, cache writes {u.get('cache_creation_input_tokens',0)}, out {u.get('output_tokens',0)}; cache reads {cache_reads} not counted), {d.get('num_turns',0)} model turns, error={d.get('is_error')}, session {d.get('session_id') or 'unknown'} ===", flush=True)
+open(sys.argv[1] + ".tokens", "w").write(f"{used} {cache_reads}")
 sys.exit(1 if d.get("is_error") else 0)
 PY
 }
 add_tokens() {
-  local n; n=$(cat "$TURN_OUT.tokens" 2>/dev/null || echo 0); rm -f "$TURN_OUT.tokens"
-  TOKENS=$(( TOKENS + n ))
+  local used=0 reads=0
+  read -r used reads < "$TURN_OUT.tokens" 2>/dev/null || true
+  rm -f "$TURN_OUT.tokens"
+  TOKENS=$(( TOKENS + ${used:-0} )); CACHE_READS=$(( CACHE_READS + ${reads:-0} ))
 }
 
 BUILD_PROMPT="Read $ORDER. Continue the work it describes from the current
