@@ -288,7 +288,7 @@ Three things learned the hard way on 2026-08-30, when a single chained command o
 - **Never chain `diff` and `apply --force` in one command.** If the diff shows a target on disk is *newer* than the source (a `~/bin` script edited in place, for example), the right move is `chezmoi add <path>` to pull it into the repo, not `--force`, which throws the edit away.
 - **`.chezmoiignore` entries must not start with `/`.** `/spec`, `/scripts`, `/docs` are rejected (`.chezmoiignore:29: /spec: invalid path`) and the whole `apply` fails, silently if nobody is watching. Write `spec`, `scripts`, `docs`. This had been failing every apply for weeks before anyone noticed.
 
-Also: an expired Vault token 403s mid-render on `dot_aliases.tmpl`; from an agent, hand the user `! vault login` and follow the recovery steps above.
+Also: a Vault 403 mid-render on `dot_aliases.tmpl` almost always means the calling shell's `VAULT_TOKEN` is stale, not that anything is broken. The token is short-lived and minted at login by `.zprofile` from the AppRole in `~/.vault-credentials`, so an agent whose shell predates the expiry just needs a fresh login shell: run chezmoi as `zsh -lc 'chezmoi diff'`. Only if that also 403s is the AppRole itself the problem (see the rotation steps above).
 
 ## Managing Kubernetes Configurations
 
