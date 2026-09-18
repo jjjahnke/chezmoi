@@ -8,6 +8,7 @@ install_git.yml
 invoke_playbook.sh
 vault_setup.md
 vault_vars.yml
+vault-values.yml
 BOOTSTRAPPING.md
 Dockerfile
 Makefile
