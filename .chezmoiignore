@@ -30,3 +30,17 @@ spec
 scripts
 copilot-proxy
 docs
+
+# TrueNAS (hostname `truenas`) gets shell config only: .zshrc, .zprofile,
+# .aliases, .gitconfig. It is an appliance, so no secrets land there (it never
+# gets a Vault token), no Mac tooling, and provision.yml never runs against it
+# (apt is disabled, root is read-only). chezmoi lives in ~/.local/bin there.
+{{ if eq .chezmoi.hostname "truenas" }}
+.aws
+.ssh
+.kube
+.docker
+.vault-credentials
+.config/clickup
+bin
+{{ end }}
