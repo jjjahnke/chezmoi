@@ -18,6 +18,16 @@ Host 192.168.35.124 docker-builder
   ServerAliveCountMax 3
   TCPKeepAlive yes
 
+# TrueNAS SCALE (VM 501 on pve-01): BigPool, the app host for Navidrome and
+# Audiobookshelf. The public key lives in the TrueNAS UI (Local Users -> jahnke
+# -> Authorized Keys), not in chezmoi: the NAS is an appliance and never runs
+# the provisioning playbook (apt is disabled there).
+Host truenas 192.168.35.127
+  HostName 192.168.35.127
+  User jahnke
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+
 # NVIDIA DGX Spark (spark-5e8d) on the LAN.
 Host spark
   HostName 192.168.35.224
