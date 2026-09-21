@@ -63,6 +63,12 @@ if [ -n "$VAULT_TOKEN" ]; then
   # Moonshot is the vendor, Kimi the product.
   export MOONSHOT_API_KEY=$(echo "$_api_keys" | jq -r .data.data.moonshot_api_key)
   export CLICKUP_API_TOKEN=$(echo "$_api_keys" | jq -r .data.data.clickup_api_token)   # gauge + genprop ship.sh, added 2026-09-07
+  # Reddit script app for _Scripts/reddit-safari.py (vault Engineering/Reddit Safari Tool), added 2026-09-21.
+  # Only id+secret are used today; username/password are stored for a later user-scoped grant.
+  export REDDIT_CLIENT_ID=$(echo "$_api_keys" | jq -r .data.data.reddit_client_id)
+  export REDDIT_CLIENT_SECRET=$(echo "$_api_keys" | jq -r .data.data.reddit_client_secret)
+  export REDDIT_USERNAME=$(echo "$_api_keys" | jq -r .data.data.reddit_username)
+  export REDDIT_PASSWORD=$(echo "$_api_keys" | jq -r .data.data.reddit_password)
   unset _api_keys
 fi
 {{- end }}
