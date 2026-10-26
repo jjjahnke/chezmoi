@@ -40,7 +40,20 @@ MAX_TOKENS="${LOOP_MAX_TOKENS:-5000000}"
 
 # No git add/commit: the harness commits. The agent may self-check with
 # make validate, but the authoritative gate run is the harness's.
-ALLOWED="Edit,Write,Read,Glob,Grep,Bash(make validate),Bash(make test*),Bash(make lint*),Bash(git status*),Bash(git diff*),Bash(git log*)"
+# `Bash(make validate)` was an EXACT pattern until 2026-09-25, so the agent could run
+# it bare and nothing else: a redirect or a pipe matched no rule and was refused
+# outright under acceptEdits. Six of the eight iterations of phase-1e could not run
+# the gate at all and argued their reds from source instead, which is the one thing
+# the orders' "prove the red by running it" rule exists to stop.
+#
+# The fix is the trailing wildcard and the two read-only targets the loop kept
+# reaching for, NOT a broad `make:*`: this Makefile also holds `push`, which pushes
+# images to the registry, and `clean`. The agent still has NO mutating git verb at
+# all, which is the property that matters: it cannot add, commit, checkout, reset,
+# stash, branch or push, so the harness stays the only thing that writes history and
+# a bad turn costs the working tree and nothing else. `git grep` is read-only and is
+# how a red gets argued when a revert would be the corruption risk.
+ALLOWED="Edit,Write,Read,Glob,Grep,Bash(make validate*),Bash(make test*),Bash(make lint*),Bash(make typecheck*),Bash(make openapi*),Bash(git status*),Bash(git diff*),Bash(git log*),Bash(git grep*)"
 
 LOGDIR="$HOME/loop-logs"; mkdir -p "$LOGDIR"
 # Named once, so a run that crosses midnight keeps one log and one transcript dir.
