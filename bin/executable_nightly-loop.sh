@@ -110,6 +110,15 @@ keep_transcript() {
 # harness decides exhausted/error/cancelled. TOKENS is the running total across
 # every turn of this run.
 TOKENS=0; CACHE_READS=0; SID=""
+# Each step of the run is also recorded by loop_run.py (sopori-cluster decisions/loop-runs.md):
+# a ledger in ~/.local/share/loop-runs/ and the Pushgateway, so a run is visible without its log.
+# A deployed copy, not a checkout a loop could be editing. Bookkeeping never breaks a run.
+LOOP_RUN="${LOOP_RUN:-$HOME/.local/bin/loop_run.py}"
+LOOP_REPO="$(basename "$(pwd)")"
+record() {
+  [ -f "$LOOP_RUN" ] || return 0
+  python3 "$LOOP_RUN" "$1" --run "$RUN_NAME" --repo "$LOOP_REPO" "${@:2}" || true
+}
 # 10216906 is unreadable at a glance; 10,216,906 is not. Pure bash, so the commas
 # do not depend on a locale that cron and launchd may not set.
 commas() {
@@ -123,6 +132,7 @@ finish() {
     done) rc=0 ;; blocked) rc=2 ;; decide) rc=3 ;; exhausted) rc=4 ;;
     error) rc=5 ;; cancelled) rc=130 ;; *) rc=5 ;;
   esac
+  record end --state "$state" --iteration "${i:-0}"
   # The harness writes STATUS only when the agent did not: exhausted, error and
   # cancelled are the harness's verdicts, and the train runner reads this file.
   if [ ! -s LOOP_STATUS.md ]; then
@@ -176,18 +186,23 @@ gate() {
   fi
   secs=$(( $(date +%s) - start ))
   echo "=== gate: ${secs}s, exit ${GATE_RC} ($(date '+%Y-%m-%d %H:%M:%S')) ==="
+  local result=fail
+  if [ "$GATE_RC" -eq 0 ]; then result=pass; elif gate_killed; then result=killed; fi
+  record gate --iteration "${i:-0}" --result "$result" --seconds "$secs"
   return "$GATE_RC"
 }
 gate_killed() { [ "$GATE_RC" -eq 124 ] || [ "$GATE_RC" -eq 137 ]; }
 
 # Green gate from iteration 0: the loop inherits a working baseline or
 # does not run at all.
+record start --order "$(basename "$ORDER" .md)" --engine "$ENGINE" --max-iterations "$ITERS"
 if gate; then
   echo "=== gate: baseline PASS ==="
 else
   echo "=== gate: baseline FAIL - fix the baseline before looping ==="
   tail -n 40 "$GATE_OUT"
   gate_killed && echo "=== (the baseline gate was killed at ${GATE_TIMEOUT}s: check 'docker --context builder ps' before blaming the code) ==="
+  record end --state preflight --iteration 0
   exit 1
 fi
 
@@ -231,6 +246,7 @@ add_tokens() {
   read -r used reads < "$TURN_OUT.tokens" 2>/dev/null || true
   rm -f "$TURN_OUT.tokens"
   TOKENS=$(( TOKENS + ${used:-0} )); CACHE_READS=$(( CACHE_READS + ${reads:-0} ))
+  record turn --iteration "$i" --tokens "${used:-0}" --cache-reads "${reads:-0}"
 }
 
 BUILD_PROMPT="Read $ORDER. Continue the work it describes from the current
