@@ -299,6 +299,124 @@ note_counts() { # $1 = 1 when the gate was green
   fi
 }
 
+# ---- DONE carries the criteria table ---------------------------------------
+# DONE is prose: "finished" reads the same whether or not every item was met, so an
+# unmet criterion can be reported as a pass. decisions/loop-checks.md (order
+# loop-checks-1) has BUILD_PROMPT ask for a verdict per numbered criterion and makes
+# the harness read it before it honours a DONE.
+#
+# The count comes from the order, not the table: a table that simply omits a criterion
+# must not pass, so C is the numbered lines under the order's '## Done criteria'
+# heading and a row count below it is a challenge, not a pass. Rows are markdown, so
+# the header (the row naming the verdict) and the separator (| --- | --- |) are not
+# data, and a verdict outside the three the prompt lists counts as a fail: nothing
+# said that criterion was met.
+criteria_read() {
+  python3 - LOOP_STATUS.md "$ORDER" <<'PY'
+import re, sys
+status_path, order_path = sys.argv[1], sys.argv[2]
+# A numbered line elsewhere in the order is not a criterion; only the run under the
+# heading counts, and an order without the heading (older orders) is one criterion.
+criteria = 1
+try:
+    order = open(order_path, errors="replace").read().splitlines()
+except OSError:
+    order = []
+for idx, line in enumerate(order):
+    if line.rstrip() == "## Done criteria":
+        criteria = 0
+        for later in order[idx + 1:]:
+            if later.startswith("## "):
+                break
+            if re.match(r"^[0-9]+\. ", later):
+                criteria += 1
+        break
+sep = re.compile(r"^\|[\s:|-]+\|?\s*$")
+rows = []
+try:
+    status = open(status_path, errors="replace").read().splitlines()
+except OSError:
+    status = []
+for line in status:
+    if not line.startswith("|") or "verdict" in line or sep.match(line):
+        continue
+    cells = line.split("|")
+    number = cells[1].strip() if len(cells) > 2 else ""
+    verdict = cells[3].strip().lower() if len(cells) > 3 else ""
+    rows.append((number, verdict))
+if not rows:
+    print("none")
+elif len(rows) < criteria:
+    print(f"few {len(rows)} {criteria}")
+else:
+    passed = sum(1 for _, v in rows if v == "pass")
+    unresolved = sum(1 for _, v in rows if v == "unresolved")
+    print(f"ok {len(rows)} {passed} {len(rows) - passed - unresolved} {unresolved}")
+    for number, verdict in rows:
+        if verdict not in ("pass", "fail", "unresolved"):
+            print(f"bad {number} {verdict}")
+        elif verdict == "fail":
+            print(f"fail {number}")
+        elif verdict == "unresolved":
+            print(f"unres {number}")
+PY
+}
+# Returns 0 only when every criterion is there and passes; otherwise sets RESUME_CTX
+# (the same warm session is told what is missing) and returns 1. Unresolved ends the
+# run as decide instead: an honest unresolved is a human's call, not the agent's.
+criteria_check() {
+  local out kind issues="" nums="" nrows ncrit tmp
+  local R P F U what n rest
+  out=$(criteria_read)
+  kind=${out%%$'\n'*}
+  case "$kind" in
+    none)
+      echo "=== criteria: no table ==="
+      rm -f LOOP_STATUS.md
+      RESUME_CTX="You wrote STATUS: DONE, but LOOP_STATUS.md has no criteria
+table: write the table the prompt asks for, one row per numbered item under the work
+order's '## Done criteria' heading, each with a verdict of pass, fail or unresolved
+and evidence, then stop."
+      return 1 ;;
+    few\ *)
+      read -r _ nrows ncrit <<< "$kind"
+      echo "=== criteria: $nrows rows for $ncrit criteria ==="
+      rm -f LOOP_STATUS.md
+      RESUME_CTX="You wrote STATUS: DONE, but the criteria table has $nrows rows
+for $ncrit criteria. Write one row per numbered item under the work order's '## Done
+criteria' heading, then stop."
+      return 1 ;;
+    ok\ *)
+      read -r _ R P F U <<< "$kind"
+      echo "=== criteria: $R rows, $P pass, $F fail, $U unresolved ==="
+      while read -r what n rest; do
+        case "$what" in
+          bad)  issues="$issues criterion $n verdict $rest is not pass, fail or unresolved." ;;
+          fail) issues="$issues criterion $n is marked fail: fix it or say why it cannot be met." ;;
+          unres) nums="${nums:+$nums, }$n" ;;
+        esac
+      done <<< "${out#*$'\n'}"
+      if [ "$F" -gt 0 ]; then
+        rm -f LOOP_STATUS.md
+        RESUME_CTX="You wrote STATUS: DONE, but the criteria table is not all
+pass:$issues Write the table again and stop."
+        return 1
+      fi
+      if [ "$U" -gt 0 ]; then
+        # The table is kept: the reason for each unresolved row is what the human
+        # needs, and only the first line and the harness's own note change.
+        tmp=$(mktemp)
+        { printf 'STATUS: DECIDE\n'; tail -n +2 LOOP_STATUS.md; printf 'harness: criteria unresolved: %s\n' "$nums"; } > "$tmp"
+        mv "$tmp" LOOP_STATUS.md
+        finish decide
+      fi
+      return 0 ;;
+    *)
+      # Unreadable output is the harness's own fault and never a pass.
+      finish error "criteria table could not be read" ;;
+  esac
+}
+
 # Green gate from iteration 0: the loop inherits a working baseline or
 # does not run at all.
 record start --order "$(basename "$ORDER" .md)" --engine "$ENGINE" --max-iterations "$ITERS"
@@ -375,6 +493,12 @@ LOOP_STATUS.md, followed by the reason:
   STATUS: BLOCKED  you cannot proceed; say what is missing
   STATUS: DECIDE   you could proceed more than one way and a human must
                    choose; state the options and your recommendation
+With STATUS: DONE, add a table to LOOP_STATUS.md with one row per
+numbered item under the work order's '## Done criteria' heading. Its
+header row is | # | criterion | verdict | evidence |. The verdict is
+one of pass, fail or unresolved; the evidence is a command and its
+result, a test id, or a path. Unresolved is an honest answer, never
+a pass.
 Otherwise leave LOOP_STATUS.md absent. Never commit LOOP_MSG.md or
 LOOP_STATUS.md."
 
@@ -430,7 +554,10 @@ LOOP_STATUS.md and say why."
     fi
     RESUME_CTX=""
     case "$STATUS" in
-      *DONE*)    finish done ;;
+      *DONE*)
+        # Committed above, so the work is kept whichever way the verdicts fall; a
+        # DONE that does not carry a passing table resumes the same session instead.
+        if criteria_check; then finish done; fi ;;
       *BLOCKED*) finish blocked ;;
       *DECIDE*)  finish decide ;;
     esac
