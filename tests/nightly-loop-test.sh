@@ -46,7 +46,8 @@ n=$(( $(cat "$STUB_COUNT" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$STUB_COUN
 # DONE carries one row per numbered done criterion: | # | criterion | verdict | evidence |
 # The separator is spaced and one verdict is capitalised: both are legal markdown.
 table() { printf 'STATUS: DONE\nfinished\n\n| # | criterion | verdict | evidence |\n| --- | --- | --- | --- |\n' > LOOP_STATUS.md; printf '%s\n' "$@" >> LOOP_STATUS.md; }
-R1="| 1 | out.txt gains a line per turn | Pass | out.txt |"
+# Criterion 1 names a verdict: only the header row, whose verdict cell says so, is skipped.
+R1="| 1 | out.txt gains a line per turn, its verdict kept | Pass | out.txt |"
 R2="| 2 | make validate is green | pass | make validate |"
 step() { echo "line $n" >> out.txt; echo "add line $n" > LOOP_MSG.md; }
 case "${STUB_MODE:-done}" in
@@ -129,6 +130,8 @@ printf "%-10s exit %-3s want 5   %s  %s\n" gatekill "$rc" "$v" "$(head -1 "$T/re
 pending() { printf "%-10s PENDING: the harness never prints '%s'\n" "$1" "$2"; PENDING=$((PENDING + 1)); }
 # The first two turns ran in one session: the harness resumed rather than starting fresh.
 samesession() { local k; k=$(grep -o 'session [0-9a-f-]\{36\} ===$' "$T/logs/$1.log" | head -2 | sort -u | wc -l | tr -d ' '); if [ "$k" = 1 ]; then v=PASS; else v=FAIL; FAIL=1; fi; printf "%-10s second turn resumed the first's session  %s\n" "$1" "$v"; }
+# The run took exactly this many turns (the second violation ends it, not a later one).
+turns() { local k; k=$(grep -c "^=== loop iteration" "$T/logs/$1.log" || true); if [ "$k" = "$2" ]; then v=PASS; else v=FAIL; FAIL=1; fi; printf "%-10s %s turns, want %s  %s\n" "$1" "$k" "$2" "$v"; }
 has() { if grep -q "$2" "$T/logs/$1.log"; then v=PASS; else v=FAIL; FAIL=1; fi; printf "%-10s log has '%s'  %s\n" "$1" "$2" "$v"; }
 lacks() { if grep -q "$2" "$T/logs/$1.log"; then v=FAIL; FAIL=1; else v=PASS; fi; printf "%-10s log lacks '%s'  %s\n" "$1" "$2" "$v"; }
 
@@ -146,6 +149,7 @@ if grep -q "=== gate counts" "$H"; then
   run countsdrop countsdrop 8 "" 3 0 '3 passed in 0.10s\n'
   has countsdrop "^=== gate counts: measured less than accepted (passed 2 < 3) ===$"
   samesession countsdrop
+  turns countsdrop 2
   # One violation, a recovery, then one more: the streak reset, so this is not decide.
   run dropflip dropflip  8 "" 0 2 '3 passed in 0.10s\n'
   # A DONE written with a violation is cleared, so restoring the counts alone is not done.
@@ -155,6 +159,7 @@ if grep -q "=== gate counts" "$H"; then
   run countsback countsback 8 "" 0 1 '3 passed in 0.10s\n'
   run skipsup  skipsup   8 "" 3 0 '3 passed in 0.10s\n'
   has skipsup "^=== gate counts: measured less than accepted (not run 1 > 0) ===$"
+  turns skipsup 2
 else pending counts "=== gate counts"; fi
 
 # Item 2: files that define the gate are listed, never blocked.

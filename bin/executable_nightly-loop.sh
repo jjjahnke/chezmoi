@@ -139,8 +139,29 @@ commas() {
   while [ ${#s} -gt 3 ]; do out=",${s: -3}$out"; s="${s:0:${#s}-3}"; done
   echo "$s$out"
 }
+# ---- gate files touched ----------------------------------------------------
+# The counts ratchet cannot see a test weakened rather than skipped: an agent may
+# edit a Makefile, a conftest or a pytest config and every count can stay the same.
+# decisions/loop-checks.md (order loop-checks-1) makes the harness report such a
+# change and never block it: the edit may be legitimate, but a human reviewing the
+# draft PR should see it in the first line rather than have to read the diff for it.
+# The basename decides, so `sub/conftest.py` counts however deep it sits.
+GATE_FILES_DEFINING="Makefile conftest.py pytest.ini setup.cfg tox.ini .coveragerc mypy.ini ruff.toml pyproject.toml package.json"
+gate_files_touched() {
+  local list
+  # Only committed work is claimed: an uncommitted name in the line would point at
+  # something the PR body cannot show. Renames and new files already come out as one
+  # name each, and the sort is LC_ALL=C because the test reads the order as bytes.
+  list=$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null \
+    | awk -v names="$GATE_FILES_DEFINING" '
+        BEGIN { n = split(names, a, " "); for (i = 1; i <= n; i++) keep[a[i]] = 1 }
+        { p = $0; sub(/.*\//, "", p); if (p in keep) print $0 }' \
+    | LC_ALL=C sort | paste -sd' ' -)
+  echo "${list:-none}"
+}
+
 finish() {
-  local state="$1" why="${2:-}" rc
+  local state="$1" why="${2:-}" rc gate_files
   case "$state" in
     done) rc=0 ;; blocked) rc=2 ;; decide) rc=3 ;; exhausted) rc=4 ;;
     error) rc=5 ;; cancelled) rc=130 ;; *) rc=5 ;;
@@ -153,16 +174,18 @@ finish() {
   fi
   # Again here, so a run cancelled or failed mid-turn keeps what that turn did.
   keep_transcript "$SID"
+  gate_files=$(gate_files_touched)
+  echo "=== gate files touched: $gate_files ==="
   echo "=== LOOP_RESULT: $state (tokens $(commas "$TOKENS")/$(commas "$MAX_TOKENS"), cache reads $(commas "$CACHE_READS") not counted, session ${SID:-none}, transcripts $RUN_DIR) $why ==="
   if [ -n "$(git status --porcelain)" ]; then
-    echo "=== WARNING: uncommitted changes remain (gate red at loop end); left in working tree ==="
+    echo "=== WARNING: uncommitted changes remain (gate red, or measured less, at loop end); left in working tree ==="
   fi
   if [ -z "${LOOP_NO_PR:-}" ]; then
     if [ "$(git rev-list --count "$BASE_SHA"..HEAD)" -gt 0 ]; then
       git push -u origin "$BRANCH"
       gh pr create --draft --title "loop: $(basename "$ORDER" .md) [$state]" \
-        --body "$(printf 'Work order: %s\nResult: **%s** %s\nTokens: %s\n\n%s\n' \
-          "$ORDER" "$state" "$why" "$(commas "$TOKENS")" "$(cat LOOP_STATUS.md 2>/dev/null)")" || true
+        --body "$(printf 'Gate files touched: %s\nWork order: %s\nResult: **%s** %s\nTokens: %s\n\n%s\n' \
+          "$gate_files" "$ORDER" "$state" "$why" "$(commas "$TOKENS")" "$(cat LOOP_STATUS.md 2>/dev/null)")" || true
     else
       echo "=== no commits produced; skipping push/PR ==="
     fi
@@ -206,10 +229,210 @@ gate() {
 }
 gate_killed() { [ "$GATE_RC" -eq 124 ] || [ "$GATE_RC" -eq 137 ]; }
 
+# ---- the gate's counts ratchet ---------------------------------------------
+# Green is the harness's permission to commit, so an agent that deletes or skips a
+# test to get there is committed without anything being measured. decisions/loop-checks.md
+# (order loop-checks-1) makes the harness read what pytest says it ran: a green gate
+# that measured less than the last accepted one is a violation, not a commit.
+#
+# The summary line is fragile in three ways the first cut missed: `-q` prints it bare
+# (no `=` runs), a run over a minute appends `(0:01:15)`, and an ANSI-coloured line
+# would not match the pattern at all, read as "no summary", and switch the ratchet
+# off silently. So strip colour first, allow both shapes, and sum every summary line
+# (some gates run pytest twice). Only `passed` and `skipped`/`xfailed`/`deselected`
+# count; warnings, failed and errors do not.
+ACC_P=""; ACC_N=""; LESS_STREAK=0; CUR_P=""; CUR_N=""; VIOLATION=0
+counts_read() {
+  python3 - "$GATE_OUT" <<'PY'
+import re, sys
+ansi = re.compile(r'\x1b\[[0-9;]*m')
+summary = re.compile(r'^=*\s*\d+ \w+(?:, \d+ \w+)* in [0-9.]+s(?: \([0-9:]+\))?\s*=*$')
+pair = re.compile(r'(\d+) (\w+)')
+passed = notrun = 0
+found = False
+for line in open(sys.argv[1], errors="replace"):
+    line = ansi.sub("", line.rstrip("\n")).strip()
+    if not summary.match(line):
+        continue
+    found = True
+    for count, word in pair.findall(line):
+        n = int(count)
+        if word == "passed":
+            passed += n
+        elif word in ("skipped", "xfailed", "deselected"):
+            notrun += n
+print(f"{passed} {notrun}" if found else "none")
+PY
+}
+# Print this gate's counts against the accepted pair and, on a green gate, move the
+# accepted pair or raise the violation. A red gate prints but is never compared or
+# accepted: its output is the failure's, not a measurement of the suite.
+note_counts() { # $1 = 1 when the gate was green
+  local green="$1" line p n
+  line=$(counts_read)
+  CUR_P=""; CUR_N=""; VIOLATION=0
+  if [ "$line" = none ]; then
+    echo "=== gate counts: none read ==="
+    if [ "$green" = 1 ]; then LESS_STREAK=0; fi
+    return 0
+  fi
+  read -r p n <<< "$line" || true
+  CUR_P=$p; CUR_N=$n
+  if [ -z "$ACC_P" ]; then
+    # Nothing accepted yet (a baseline that read nothing, or a red gate before the
+    # first readable green): this gate becomes the one later gates are held to.
+    echo "=== gate counts: passed $p, not run $n (accepted none) ==="
+    if [ "$green" = 1 ]; then ACC_P=$p; ACC_N=$n; LESS_STREAK=0; fi
+    return 0
+  fi
+  echo "=== gate counts: passed $p, not run $n (accepted $ACC_P/$ACC_N) ==="
+  [ "$green" = 1 ] || return 0
+  if [ "$p" -lt "$ACC_P" ] || [ "$n" -gt "$ACC_N" ]; then
+    VIOLATION=1; LESS_STREAK=$((LESS_STREAK + 1))
+    if [ "$p" -lt "$ACC_P" ]; then
+      echo "=== gate counts: measured less than accepted (passed $p < $ACC_P) ==="
+    else
+      echo "=== gate counts: measured less than accepted (not run $n > $ACC_N) ==="
+    fi
+  else
+    ACC_P=$p; ACC_N=$n; LESS_STREAK=0
+  fi
+}
+
+# ---- DONE carries the criteria table ---------------------------------------
+# DONE is prose: "finished" reads the same whether or not every item was met, so an
+# unmet criterion can be reported as a pass. decisions/loop-checks.md (order
+# loop-checks-1) has BUILD_PROMPT ask for a verdict per numbered criterion and makes
+# the harness read it before it honours a DONE.
+#
+# The count comes from the order, not the table: a table that simply omits a criterion
+# must not pass, so C is the numbered lines under the order's '## Done criteria'
+# heading and a row count below it is a challenge, not a pass. Rows are markdown, so
+# the header (the row naming the verdict) and the separator (| --- | --- |) are not
+# data, and a verdict outside the three the prompt lists counts as a fail: nothing
+# said that criterion was met.
+criteria_read() {
+  python3 - LOOP_STATUS.md "$ORDER" <<'PY'
+import re, sys
+status_path, order_path = sys.argv[1], sys.argv[2]
+# A numbered line elsewhere in the order is not a criterion; only the run under the
+# heading counts, and an order without the heading (older orders) is one criterion.
+criteria = 1
+try:
+    order = open(order_path, errors="replace").read().splitlines()
+except OSError:
+    order = []
+for idx, line in enumerate(order):
+    if line.rstrip() == "## Done criteria":
+        criteria = 0
+        for later in order[idx + 1:]:
+            if later.startswith("## "):
+                break
+            if re.match(r"^[0-9]+\. ", later):
+                criteria += 1
+        break
+sep = re.compile(r"^\|[\s:|-]+\|?\s*$")
+rows = []
+try:
+    status = open(status_path, errors="replace").read().splitlines()
+except OSError:
+    status = []
+for line in status:
+    if not line.startswith("|") or sep.match(line):
+        continue
+    cells = line.split("|")
+    # The header is the row whose verdict cell says "verdict". Matching the word
+    # anywhere dropped a real row whose criterion named a verdict ("The verdict
+    # table", docs2data L5a), and the agent could never write enough rows.
+    if len(cells) > 3 and cells[3].strip().lower() == "verdict":
+        continue
+    number = cells[1].strip() if len(cells) > 2 else ""
+    verdict = cells[3].strip().lower() if len(cells) > 3 else ""
+    rows.append((number, verdict))
+if not rows:
+    print("none")
+elif len(rows) < criteria:
+    print(f"few {len(rows)} {criteria}")
+else:
+    passed = sum(1 for _, v in rows if v == "pass")
+    unresolved = sum(1 for _, v in rows if v == "unresolved")
+    print(f"ok {len(rows)} {passed} {len(rows) - passed - unresolved} {unresolved}")
+    for number, verdict in rows:
+        if verdict not in ("pass", "fail", "unresolved"):
+            print(f"bad {number} {verdict}")
+        elif verdict == "fail":
+            print(f"fail {number}")
+        elif verdict == "unresolved":
+            print(f"unres {number}")
+PY
+}
+# Returns 0 only when every criterion is there and passes; otherwise sets RESUME_CTX
+# (the same warm session is told what is missing) and returns 1. Unresolved ends the
+# run as decide instead: an honest unresolved is a human's call, not the agent's.
+criteria_check() {
+  local out kind issues="" nums="" nrows ncrit tmp
+  local R P F U what n rest
+  out=$(criteria_read)
+  kind=${out%%$'\n'*}
+  case "$kind" in
+    none)
+      echo "=== criteria: no table ==="
+      rm -f LOOP_STATUS.md
+      RESUME_CTX="You wrote STATUS: DONE, but LOOP_STATUS.md has no criteria
+table: write the table the prompt asks for, one row per numbered item under the work
+order's '## Done criteria' heading, each with a verdict of pass, fail or unresolved
+and evidence, then stop."
+      return 1 ;;
+    few\ *)
+      read -r _ nrows ncrit <<< "$kind"
+      echo "=== criteria: $nrows rows for $ncrit criteria ==="
+      rm -f LOOP_STATUS.md
+      RESUME_CTX="You wrote STATUS: DONE, but the criteria table has $nrows rows
+for $ncrit criteria. Write one row per numbered item under the work order's '## Done
+criteria' heading, then stop."
+      return 1 ;;
+    ok\ *)
+      read -r _ R P F U <<< "$kind"
+      echo "=== criteria: $R rows, $P pass, $F fail, $U unresolved ==="
+      while read -r what n rest; do
+        case "$what" in
+          bad)  issues="$issues criterion $n verdict $rest is not pass, fail or unresolved." ;;
+          fail) issues="$issues criterion $n is marked fail: fix it or say why it cannot be met." ;;
+          unres) nums="${nums:+$nums, }$n" ;;
+        esac
+      done <<< "${out#*$'\n'}"
+      if [ "$F" -gt 0 ]; then
+        rm -f LOOP_STATUS.md
+        RESUME_CTX="You wrote STATUS: DONE, but the criteria table is not all
+pass:$issues Write the table again and stop."
+        return 1
+      fi
+      if [ "$U" -gt 0 ]; then
+        # The table is kept: the reason for each unresolved row is what the human
+        # needs, and only the first line and the harness's own note change.
+        tmp=$(mktemp)
+        { printf 'STATUS: DECIDE\n'; tail -n +2 LOOP_STATUS.md; printf 'harness: criteria unresolved: %s\n' "$nums"; } > "$tmp"
+        mv "$tmp" LOOP_STATUS.md
+        finish decide
+      fi
+      return 0 ;;
+    *)
+      # Unreadable output is the harness's own fault and never a pass.
+      finish error "criteria table could not be read" ;;
+  esac
+}
+
 # Green gate from iteration 0: the loop inherits a working baseline or
 # does not run at all.
 record start --order "$(basename "$ORDER" .md)" --engine "$ENGINE" --max-iterations "$ITERS"
 if gate; then
+  BASELINE_COUNTS=$(counts_read)
+  if [ "$BASELINE_COUNTS" = none ]; then
+    echo "=== gate counts: none read ==="
+  else
+    read -r ACC_P ACC_N <<< "$BASELINE_COUNTS" || true
+    echo "=== gate counts: passed $ACC_P, not run $ACC_N (baseline) ==="
+  fi
   echo "=== gate: baseline PASS ==="
 else
   echo "=== gate: baseline FAIL - fix the baseline before looping ==="
@@ -275,6 +498,12 @@ LOOP_STATUS.md, followed by the reason:
   STATUS: BLOCKED  you cannot proceed; say what is missing
   STATUS: DECIDE   you could proceed more than one way and a human must
                    choose; state the options and your recommendation
+With STATUS: DONE, add a table to LOOP_STATUS.md with one row per
+numbered item under the work order's '## Done criteria' heading. Its
+header row is | # | criterion | verdict | evidence |. The verdict is
+one of pass, fail or unresolved; the evidence is a command and its
+result, a test id, or a path. Unresolved is an honest answer, never
+a pass.
 Otherwise leave LOOP_STATUS.md absent. Never commit LOOP_MSG.md or
 LOOP_STATUS.md."
 
@@ -296,7 +525,32 @@ for i in $(seq 1 "$ITERS"); do
   fi
 
   STATUS=$(head -1 LOOP_STATUS.md 2>/dev/null || true)
-  if gate; then
+  if gate; then GATE_OK=1; else GATE_OK=0; fi
+  note_counts "$GATE_OK"
+
+  if [ "$GATE_OK" = 1 ] && [ "$VIOLATION" = 1 ]; then
+    # Green, but it measured less than the last accepted gate: do not commit. The
+    # turn's work stays in the working tree and the same session is told to put the
+    # measurement back. A DONE is cleared for the same reason the red path clears
+    # it: restoring the counts alone must not end the run as complete.
+    echo "=== gate: PASS but measured less (iteration $i) ==="
+    case "$STATUS" in
+      *BLOCKED*) finish blocked ;;
+      *DECIDE*)  finish decide ;;
+    esac
+    # Twice running is not an accident or a flaky suite: the work order itself is
+    # asking for less, which is a human's call.
+    if [ "$LESS_STREAK" -ge 2 ]; then
+      finish decide "gate measured less twice running: passed $CUR_P (accepted $ACC_P), not run $CUR_N (accepted $ACC_N)"
+    fi
+    case "$STATUS" in
+      *DONE*) rm -f LOOP_STATUS.md ;;
+    esac
+    RESUME_CTX="The gate measured less than it did before your turn: passed
+$CUR_P (was $ACC_P), not run $CUR_N (was $ACC_N). Restore what it measured. If
+the work order requires measuring less, write STATUS: DECIDE in
+LOOP_STATUS.md and say why."
+  elif [ "$GATE_OK" = 1 ]; then
     echo "=== gate: PASS (iteration $i) ==="
     if [ -n "$(git status --porcelain)" ]; then
       MSG=$(head -1 LOOP_MSG.md 2>/dev/null || true)
@@ -305,7 +559,10 @@ for i in $(seq 1 "$ITERS"); do
     fi
     RESUME_CTX=""
     case "$STATUS" in
-      *DONE*)    finish done ;;
+      *DONE*)
+        # Committed above, so the work is kept whichever way the verdicts fall; a
+        # DONE that does not carry a passing table resumes the same session instead.
+        if criteria_check; then finish done; fi ;;
       *BLOCKED*) finish blocked ;;
       *DECIDE*)  finish decide ;;
     esac
