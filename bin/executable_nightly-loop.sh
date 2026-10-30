@@ -139,8 +139,29 @@ commas() {
   while [ ${#s} -gt 3 ]; do out=",${s: -3}$out"; s="${s:0:${#s}-3}"; done
   echo "$s$out"
 }
+# ---- gate files touched ----------------------------------------------------
+# The counts ratchet cannot see a test weakened rather than skipped: an agent may
+# edit a Makefile, a conftest or a pytest config and every count can stay the same.
+# decisions/loop-checks.md (order loop-checks-1) makes the harness report such a
+# change and never block it: the edit may be legitimate, but a human reviewing the
+# draft PR should see it in the first line rather than have to read the diff for it.
+# The basename decides, so `sub/conftest.py` counts however deep it sits.
+GATE_FILES_DEFINING="Makefile conftest.py pytest.ini setup.cfg tox.ini .coveragerc mypy.ini ruff.toml pyproject.toml package.json"
+gate_files_touched() {
+  local list
+  # Only committed work is claimed: an uncommitted name in the line would point at
+  # something the PR body cannot show. Renames and new files already come out as one
+  # name each, and the sort is LC_ALL=C because the test reads the order as bytes.
+  list=$(git diff --name-only "$BASE_SHA" HEAD 2>/dev/null \
+    | awk -v names="$GATE_FILES_DEFINING" '
+        BEGIN { n = split(names, a, " "); for (i = 1; i <= n; i++) keep[a[i]] = 1 }
+        { p = $0; sub(/.*\//, "", p); if (p in keep) print $0 }' \
+    | LC_ALL=C sort | paste -sd' ' -)
+  echo "${list:-none}"
+}
+
 finish() {
-  local state="$1" why="${2:-}" rc
+  local state="$1" why="${2:-}" rc gate_files
   case "$state" in
     done) rc=0 ;; blocked) rc=2 ;; decide) rc=3 ;; exhausted) rc=4 ;;
     error) rc=5 ;; cancelled) rc=130 ;; *) rc=5 ;;
@@ -153,6 +174,8 @@ finish() {
   fi
   # Again here, so a run cancelled or failed mid-turn keeps what that turn did.
   keep_transcript "$SID"
+  gate_files=$(gate_files_touched)
+  echo "=== gate files touched: $gate_files ==="
   echo "=== LOOP_RESULT: $state (tokens $(commas "$TOKENS")/$(commas "$MAX_TOKENS"), cache reads $(commas "$CACHE_READS") not counted, session ${SID:-none}, transcripts $RUN_DIR) $why ==="
   if [ -n "$(git status --porcelain)" ]; then
     echo "=== WARNING: uncommitted changes remain (gate red, or measured less, at loop end); left in working tree ==="
@@ -161,8 +184,8 @@ finish() {
     if [ "$(git rev-list --count "$BASE_SHA"..HEAD)" -gt 0 ]; then
       git push -u origin "$BRANCH"
       gh pr create --draft --title "loop: $(basename "$ORDER" .md) [$state]" \
-        --body "$(printf 'Work order: %s\nResult: **%s** %s\nTokens: %s\n\n%s\n' \
-          "$ORDER" "$state" "$why" "$(commas "$TOKENS")" "$(cat LOOP_STATUS.md 2>/dev/null)")" || true
+        --body "$(printf 'Gate files touched: %s\nWork order: %s\nResult: **%s** %s\nTokens: %s\n\n%s\n' \
+          "$gate_files" "$ORDER" "$state" "$why" "$(commas "$TOKENS")" "$(cat LOOP_STATUS.md 2>/dev/null)")" || true
     else
       echo "=== no commits produced; skipping push/PR ==="
     fi
