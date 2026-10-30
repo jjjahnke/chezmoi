@@ -155,7 +155,7 @@ finish() {
   keep_transcript "$SID"
   echo "=== LOOP_RESULT: $state (tokens $(commas "$TOKENS")/$(commas "$MAX_TOKENS"), cache reads $(commas "$CACHE_READS") not counted, session ${SID:-none}, transcripts $RUN_DIR) $why ==="
   if [ -n "$(git status --porcelain)" ]; then
-    echo "=== WARNING: uncommitted changes remain (gate red at loop end); left in working tree ==="
+    echo "=== WARNING: uncommitted changes remain (gate red, or measured less, at loop end); left in working tree ==="
   fi
   if [ -z "${LOOP_NO_PR:-}" ]; then
     if [ "$(git rev-list --count "$BASE_SHA"..HEAD)" -gt 0 ]; then
@@ -206,10 +206,87 @@ gate() {
 }
 gate_killed() { [ "$GATE_RC" -eq 124 ] || [ "$GATE_RC" -eq 137 ]; }
 
+# ---- the gate's counts ratchet ---------------------------------------------
+# Green is the harness's permission to commit, so an agent that deletes or skips a
+# test to get there is committed without anything being measured. decisions/loop-checks.md
+# (order loop-checks-1) makes the harness read what pytest says it ran: a green gate
+# that measured less than the last accepted one is a violation, not a commit.
+#
+# The summary line is fragile in three ways the first cut missed: `-q` prints it bare
+# (no `=` runs), a run over a minute appends `(0:01:15)`, and an ANSI-coloured line
+# would not match the pattern at all, read as "no summary", and switch the ratchet
+# off silently. So strip colour first, allow both shapes, and sum every summary line
+# (some gates run pytest twice). Only `passed` and `skipped`/`xfailed`/`deselected`
+# count; warnings, failed and errors do not.
+ACC_P=""; ACC_N=""; LESS_STREAK=0; CUR_P=""; CUR_N=""; VIOLATION=0
+counts_read() {
+  python3 - "$GATE_OUT" <<'PY'
+import re, sys
+ansi = re.compile(r'\x1b\[[0-9;]*m')
+summary = re.compile(r'^=*\s*\d+ \w+(?:, \d+ \w+)* in [0-9.]+s(?: \([0-9:]+\))?\s*=*$')
+pair = re.compile(r'(\d+) (\w+)')
+passed = notrun = 0
+found = False
+for line in open(sys.argv[1], errors="replace"):
+    line = ansi.sub("", line.rstrip("\n")).strip()
+    if not summary.match(line):
+        continue
+    found = True
+    for count, word in pair.findall(line):
+        n = int(count)
+        if word == "passed":
+            passed += n
+        elif word in ("skipped", "xfailed", "deselected"):
+            notrun += n
+print(f"{passed} {notrun}" if found else "none")
+PY
+}
+# Print this gate's counts against the accepted pair and, on a green gate, move the
+# accepted pair or raise the violation. A red gate prints but is never compared or
+# accepted: its output is the failure's, not a measurement of the suite.
+note_counts() { # $1 = 1 when the gate was green
+  local green="$1" line p n
+  line=$(counts_read)
+  CUR_P=""; CUR_N=""; VIOLATION=0
+  if [ "$line" = none ]; then
+    echo "=== gate counts: none read ==="
+    if [ "$green" = 1 ]; then LESS_STREAK=0; fi
+    return 0
+  fi
+  read -r p n <<< "$line" || true
+  CUR_P=$p; CUR_N=$n
+  if [ -z "$ACC_P" ]; then
+    # Nothing accepted yet (a baseline that read nothing, or a red gate before the
+    # first readable green): this gate becomes the one later gates are held to.
+    echo "=== gate counts: passed $p, not run $n (accepted none) ==="
+    if [ "$green" = 1 ]; then ACC_P=$p; ACC_N=$n; LESS_STREAK=0; fi
+    return 0
+  fi
+  echo "=== gate counts: passed $p, not run $n (accepted $ACC_P/$ACC_N) ==="
+  [ "$green" = 1 ] || return 0
+  if [ "$p" -lt "$ACC_P" ] || [ "$n" -gt "$ACC_N" ]; then
+    VIOLATION=1; LESS_STREAK=$((LESS_STREAK + 1))
+    if [ "$p" -lt "$ACC_P" ]; then
+      echo "=== gate counts: measured less than accepted (passed $p < $ACC_P) ==="
+    else
+      echo "=== gate counts: measured less than accepted (not run $n > $ACC_N) ==="
+    fi
+  else
+    ACC_P=$p; ACC_N=$n; LESS_STREAK=0
+  fi
+}
+
 # Green gate from iteration 0: the loop inherits a working baseline or
 # does not run at all.
 record start --order "$(basename "$ORDER" .md)" --engine "$ENGINE" --max-iterations "$ITERS"
 if gate; then
+  BASELINE_COUNTS=$(counts_read)
+  if [ "$BASELINE_COUNTS" = none ]; then
+    echo "=== gate counts: none read ==="
+  else
+    read -r ACC_P ACC_N <<< "$BASELINE_COUNTS" || true
+    echo "=== gate counts: passed $ACC_P, not run $ACC_N (baseline) ==="
+  fi
   echo "=== gate: baseline PASS ==="
 else
   echo "=== gate: baseline FAIL - fix the baseline before looping ==="
@@ -296,7 +373,32 @@ for i in $(seq 1 "$ITERS"); do
   fi
 
   STATUS=$(head -1 LOOP_STATUS.md 2>/dev/null || true)
-  if gate; then
+  if gate; then GATE_OK=1; else GATE_OK=0; fi
+  note_counts "$GATE_OK"
+
+  if [ "$GATE_OK" = 1 ] && [ "$VIOLATION" = 1 ]; then
+    # Green, but it measured less than the last accepted gate: do not commit. The
+    # turn's work stays in the working tree and the same session is told to put the
+    # measurement back. A DONE is cleared for the same reason the red path clears
+    # it: restoring the counts alone must not end the run as complete.
+    echo "=== gate: PASS but measured less (iteration $i) ==="
+    case "$STATUS" in
+      *BLOCKED*) finish blocked ;;
+      *DECIDE*)  finish decide ;;
+    esac
+    # Twice running is not an accident or a flaky suite: the work order itself is
+    # asking for less, which is a human's call.
+    if [ "$LESS_STREAK" -ge 2 ]; then
+      finish decide "gate measured less twice running: passed $CUR_P (accepted $ACC_P), not run $CUR_N (accepted $ACC_N)"
+    fi
+    case "$STATUS" in
+      *DONE*) rm -f LOOP_STATUS.md ;;
+    esac
+    RESUME_CTX="The gate measured less than it did before your turn: passed
+$CUR_P (was $ACC_P), not run $CUR_N (was $ACC_N). Restore what it measured. If
+the work order requires measuring less, write STATUS: DECIDE in
+LOOP_STATUS.md and say why."
+  elif [ "$GATE_OK" = 1 ]; then
     echo "=== gate: PASS (iteration $i) ==="
     if [ -n "$(git status --porcelain)" ]; then
       MSG=$(head -1 LOOP_MSG.md 2>/dev/null || true)
