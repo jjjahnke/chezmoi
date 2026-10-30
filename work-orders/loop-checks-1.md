@@ -98,7 +98,8 @@ would die on a syntax error) and no unescaped double quotes:
 
 When the agent wrote `STATUS: DONE` and the gate is green (after committing, as now), read the
 table from `LOOP_STATUS.md`: data rows are lines starting with `|`, excluding the header (the row
-containing `verdict`) and separator rows (any line matching `^\|[\s:|-]+\|?\s*$`, so
+whose third cell is `verdict`; review fix 2026-10-29, the order first said any row containing the
+word, which drops a criterion that names a verdict) and separator rows (any line matching `^\|[\s:|-]+\|?\s*$`, so
 `| --- | --- |` is a separator too). Split a row on `|`: the first cell is the criterion number, the
 third is the verdict, trimmed and lowercased. A verdict other than `pass`, `fail` or `unresolved`
 (`n/a`, `partial`) counts as `fail`.

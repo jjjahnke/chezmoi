@@ -338,9 +338,14 @@ try:
 except OSError:
     status = []
 for line in status:
-    if not line.startswith("|") or "verdict" in line or sep.match(line):
+    if not line.startswith("|") or sep.match(line):
         continue
     cells = line.split("|")
+    # The header is the row whose verdict cell says "verdict". Matching the word
+    # anywhere dropped a real row whose criterion named a verdict ("The verdict
+    # table", docs2data L5a), and the agent could never write enough rows.
+    if len(cells) > 3 and cells[3].strip().lower() == "verdict":
+        continue
     number = cells[1].strip() if len(cells) > 2 else ""
     verdict = cells[3].strip().lower() if len(cells) > 3 else ""
     rows.append((number, verdict))
