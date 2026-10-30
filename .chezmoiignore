@@ -28,6 +28,8 @@ repopulate_vault.sh
 
 # Ignore entire directories
 spec
+tests
+work-orders
 scripts
 copilot-proxy
 docs
